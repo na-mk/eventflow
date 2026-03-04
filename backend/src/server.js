@@ -5,6 +5,7 @@ import { connectDB } from "./config/db.js"
 import authRoutes from "./routes/auth.routes.js"
 import testRoutes from "./routes/test.routes.js"
 import rbacTestRoutes from "./routes/rbac-test.routes.js"
+import eventRoutes from "./routes/event.routes.js"
 
 dotenv.config()
 
@@ -16,6 +17,8 @@ app.use(express.json())
 connectDB()
 
 app.use("/api/auth", authRoutes)
+app.use("/api/rbac", rbacTestRoutes)
+app.use("/api/events", eventRoutes)
 app.use("/api/test", testRoutes)
 
 app.get("/api/health", (req, res) => {
