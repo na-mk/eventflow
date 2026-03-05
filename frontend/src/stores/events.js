@@ -45,8 +45,17 @@ export const useEventsStore = defineStore('events', {
 
       }
 
-    }
+    },
+    async deleteEvent(id) {
+  try {
+    await api.delete(`/events/${id}`)
+    this.events = this.events.filter(e => e._id !== id)
+  } catch (err) {
+    this.error = err.response?.data?.message || "Erreur suppression"
+  }
+}
 
   }
+  
 
 })

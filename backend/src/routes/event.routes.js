@@ -1,21 +1,11 @@
-import { Router } from "express"
+import express from "express"
+import { getEvents, createEvent, deleteEvent } from "../controllers/event.controller.js"
 
-import { getEvents, createEvent } from "../controllers/event.controller.js"
+const router = express.Router()
 
-import { authMiddleware } from "../middlewares/auth.middleware.js"
-import { roleMiddleware } from "../middlewares/role.middleware.js"
-
-const router = Router()
-
-// voir les événements
-router.get("/", getEvents)
-
-// créer un événement
-router.post(
-  "/",
-  authMiddleware,
-  roleMiddleware(["organizer", "admin"]),
-  createEvent
-)
+// URL finale: /api/events
+router.get("/events", getEvents)
+router.post("/events", createEvent)
+router.delete("/events/:id", deleteEvent)
 
 export default router

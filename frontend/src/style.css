@@ -1,3 +1,39 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Base global */
+@layer base {
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
+}
+
+/* Helpers (optionnels mais utiles) */
+@layer utilities {
+  /* Limiter le texte (nécessite tailwind v3.3+ -> OK chez toi) */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* Optionnel: rendre les inputs plus "clean" */
+@layer components {
+  .input {
+    @apply mt-1 w-full px-3 py-2 border rounded-lg bg-white
+           focus:outline-none focus:ring-2 focus:ring-indigo-200;
+  }
+}
