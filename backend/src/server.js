@@ -1,30 +1,38 @@
 import express from "express"
 import cors from "cors"
 import mongoose from "mongoose"
+import dotenv from "dotenv"
 import eventRoutes from "./routes/event.routes.js"
+
+dotenv.config()
 
 const app = express()
 
 // Middlewares
-app.use(cors())
+app.use(cors({ origin: true }))
 app.use(express.json())
 
-// ✅ Routes
+// Routes
 app.use("/api", eventRoutes)
 
-// ✅ Route test (pour vérifier que le serveur répond)
+// Route test
 app.get("/", (req, res) => {
   res.send("✅ EVENTFLOW API is running")
 })
 
-// ✅ MongoDB (si tu as déjà une connexion ailleurs, garde la tienne)
-const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/eventflow"
+// MongoDB
+const MONGO_URI = process.env.MONGO_URI
+if (!MONGO_URI) {
+  console.error("❌ MONGO_URI is missing. Check backend/.env")
+  process.exit(1)
+}
+
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err))
 
-// ✅ Port
+// Server
 const PORT = process.env.PORT || 4000
 app.listen(PORT, () => {
   console.log(`✅ Backend running on http://localhost:${PORT}`)
