@@ -43,31 +43,6 @@ Users can create, view, and manage events through a modern interface with authen
 
 ---
 
-## 📂 Project Structure
-eventflow
-│
-├── backend
-│ ├── src
-│ │ ├── config
-│ │ ├── controllers
-│ │ ├── middlewares
-│ │ ├── models
-│ │ ├── routes
-│ │ └── server.js
-│
-├── frontend
-│ ├── src
-│ │ ├── components
-│ │ ├── pages
-│ │ ├── router
-│ │ ├── services
-│ │ ├── stores
-│ │ └── App.vue
-│
-└── README.md
-
----
-
 ## ⚙️ Installation
 
 Clone the repository
@@ -92,6 +67,8 @@ npm run dev
 | GET    | /api/events     | Get events   |
 | POST   | /api/events     | Create event |
 | DELETE | /api/events/:id | Delete event |
+
+---
 
 👨‍💻 Author
 Anna Merveille KAYA
