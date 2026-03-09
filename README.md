@@ -68,7 +68,8 @@ npm run dev
 | POST   | /api/events     | Create event |
 | DELETE | /api/events/:id | Delete event |
 
----
+
+
 
 👨‍💻 Author
 Anna Merveille KAYA
