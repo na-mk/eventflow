@@ -31,6 +31,9 @@ class Event
     #[Assert\GreaterThan('today')]
     private ?\DateTimeInterface $eventDate = null;
 
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTimeInterface $endDate = null;
+
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     private ?string $location = null;
@@ -69,6 +72,9 @@ class Event
     public function getEventDate(): ?\DateTimeInterface { return $this->eventDate; }
     public function setEventDate(\DateTimeInterface $eventDate): static { $this->eventDate = $eventDate; return $this; }
 
+    public function getEndDate(): ?\DateTimeInterface { return $this->endDate; }
+    public function setEndDate(?\DateTimeInterface $endDate): static { $this->endDate = $endDate; return $this; }
+
     public function getLocation(): ?string { return $this->location; }
     public function setLocation(string $location): static { $this->location = $location; return $this; }
 
@@ -89,6 +95,11 @@ class Event
     public function getConfirmedParticipantsCount(): int
     {
         return $this->registrations->filter(fn($r) => $r->getStatus() === 'confirmed')->count();
+    }
+
+    public function getRemainingPlaces(): int
+    {
+        return max(0, $this->maxParticipants - $this->getConfirmedParticipantsCount());
     }
 
     public function isFull(): bool

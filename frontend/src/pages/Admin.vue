@@ -22,6 +22,7 @@ const editForm = reactive({
   title: '',
   description: '',
   eventDate: '',
+  endDate: '',
   location: '',
   maxParticipants: 50,
   isPublished: false,
@@ -31,6 +32,7 @@ const createForm = reactive({
   title: '',
   description: '',
   eventDate: '',
+  endDate: '',
   location: '',
   maxParticipants: 50,
   isPublished: true,
@@ -155,6 +157,21 @@ function formatDate(value, options = { dateStyle: 'medium', timeStyle: 'short' }
   return new Intl.DateTimeFormat('fr-FR', options).format(new Date(value))
 }
 
+function formatDateRange(start, end) {
+  if (!start) return 'Date inconnue'
+  if (!end) return formatDate(start)
+
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  const sameDay = startDate.toDateString() === endDate.toDateString()
+
+  if (sameDay) {
+    return `${formatDate(start)} - ${new Intl.DateTimeFormat('fr-FR', { timeStyle: 'short' }).format(endDate)}`
+  }
+
+  return `${formatDate(start)} - ${formatDate(end)}`
+}
+
 function toDatetimeLocal(value) {
   if (!value) return ''
   const date = new Date(value)
@@ -180,6 +197,7 @@ function openEditor(event) {
   editForm.title = event.title || ''
   editForm.description = event.description || ''
   editForm.eventDate = toDatetimeLocal(event.eventDate)
+  editForm.endDate = toDatetimeLocal(event.endDate)
   editForm.location = event.location || ''
   editForm.maxParticipants = Number(event.maxParticipants || 50)
   editForm.isPublished = !!event.isPublished
@@ -195,6 +213,7 @@ function resetCreateForm() {
   createForm.title = ''
   createForm.description = ''
   createForm.eventDate = ''
+  createForm.endDate = ''
   createForm.location = ''
   createForm.maxParticipants = 50
   createForm.isPublished = true
@@ -210,6 +229,7 @@ async function submitCreate() {
       ...createForm,
       maxParticipants: Number(createForm.maxParticipants),
       eventDate: createForm.eventDate ? new Date(createForm.eventDate).toISOString() : '',
+      endDate: createForm.endDate ? new Date(createForm.endDate).toISOString() : '',
     })
 
     successMessage.value = 'Nouvel evenement cree avec succes.'
@@ -235,6 +255,7 @@ async function submitEdition() {
       ...editForm,
       maxParticipants: Number(editForm.maxParticipants),
       eventDate: editForm.eventDate ? new Date(editForm.eventDate).toISOString() : '',
+      endDate: editForm.endDate ? new Date(editForm.endDate).toISOString() : '',
     })
 
     successMessage.value = 'Evenement mis a jour avec succes.'
@@ -402,9 +423,15 @@ async function deleteEvent(event) {
         </div>
 
         <div>
-          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-muted">Date et heure</label>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-muted">Debut</label>
           <input v-model="createForm.eventDate" type="datetime-local" class="ef-input" />
           <p v-if="createErrors.eventDate" class="mt-2 text-xs text-red-500">{{ createErrors.eventDate }}</p>
+        </div>
+
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-muted">Fin</label>
+          <input v-model="createForm.endDate" type="datetime-local" class="ef-input" />
+          <p v-if="createErrors.endDate" class="mt-2 text-xs text-red-500">{{ createErrors.endDate }}</p>
         </div>
 
         <div>
@@ -505,8 +532,8 @@ async function deleteEvent(event) {
 
           <div class="mt-5 space-y-3 rounded-3xl border p-5" style="border-color:var(--border); background:var(--bg-card)">
             <div class="flex items-center justify-between text-sm">
-              <span class="text-muted">Date</span>
-              <strong class="text-main">{{ formatDate(spotlightEvent.eventDate) }}</strong>
+              <span class="text-muted">Horaires</span>
+              <strong class="text-main text-right">{{ formatDateRange(spotlightEvent.eventDate, spotlightEvent.endDate) }}</strong>
             </div>
             <div class="flex items-center justify-between text-sm">
               <span class="text-muted">Lieu</span>
@@ -578,7 +605,7 @@ async function deleteEvent(event) {
               <div>
                 <h3 class="text-xl font-extrabold text-main">{{ event.title }}</h3>
                 <p class="mt-2 text-sm text-sub">
-                  {{ organizerName(event) }} · {{ formatDate(event.eventDate) }}
+                  {{ organizerName(event) }} · {{ formatDateRange(event.eventDate, event.endDate) }}
                 </p>
               </div>
             </div>
@@ -600,8 +627,16 @@ async function deleteEvent(event) {
             </div>
 
             <div class="rounded-2xl border p-4" style="border-color:var(--border); background:var(--border-light)">
+              <div class="text-xs uppercase tracking-[0.18em] text-muted">Fin</div>
+              <div class="mt-2 text-sm font-semibold text-main">{{ event.endDate ? formatDate(event.endDate) : 'Non renseignee' }}</div>
+            </div>
+
+            <div class="rounded-2xl border p-4 md:col-span-2" style="border-color:var(--border); background:var(--border-light)">
               <div class="text-xs uppercase tracking-[0.18em] text-muted">Capacite</div>
               <div class="mt-2 text-sm font-semibold text-main">{{ event.participantsCount }} / {{ event.maxParticipants }} inscrits</div>
+              <div class="mt-1 text-xs font-semibold" :class="event.remainingPlaces === 0 ? 'text-red-500' : 'text-sub'">
+                {{ event.remainingPlaces }} place{{ event.remainingPlaces > 1 ? 's' : '' }} restante{{ event.remainingPlaces > 1 ? 's' : '' }}
+              </div>
             </div>
           </div>
 
@@ -680,8 +715,13 @@ async function deleteEvent(event) {
           </div>
 
           <div>
-            <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-muted">Date et heure</label>
+            <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-muted">Debut</label>
             <input v-model="editForm.eventDate" type="datetime-local" class="ef-input" />
+          </div>
+
+          <div>
+            <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-muted">Fin</label>
+            <input v-model="editForm.endDate" type="datetime-local" class="ef-input" />
           </div>
 
           <div>

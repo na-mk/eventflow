@@ -98,10 +98,11 @@ class RegistrationController extends AbstractController
             'status'       => $r->getStatus(),
             'registeredAt' => $r->getRegisteredAt()?->format('c'),
             'event'        => [
-                'id'        => $r->getEvent()?->getId(),
-                'title'     => $r->getEvent()?->getTitle(),
-                'eventDate' => $r->getEvent()?->getEventDate()?->format('c'),
-                'location'  => $r->getEvent()?->getLocation(),
+                'id'              => $r->getEvent()?->getId(),
+                'title'           => $r->getEvent()?->getTitle(),
+                'eventDate'       => $r->getEvent()?->getEventDate()?->format('c'),
+                'location'        => $r->getEvent()?->getLocation(),
+                'remainingPlaces' => $r->getEvent()?->getRemainingPlaces(),
             ],
         ];
     }

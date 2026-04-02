@@ -42,6 +42,21 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
+function formatRange(start, end) {
+  if (!start) return 'Date a confirmer'
+  if (!end) return formatDate(start)
+
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  const sameDay = startDate.toDateString() === endDate.toDateString()
+
+  if (sameDay) {
+    return `${new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' }).format(startDate)} - ${new Intl.DateTimeFormat('fr-FR', { timeStyle: 'short' }).format(endDate)}`
+  }
+
+  return `${formatDate(start)} - ${formatDate(end)}`
+}
+
 async function register() {
   feedback.value = ''
 
@@ -50,6 +65,8 @@ async function register() {
     feedback.value = 'Inscription enregistree avec succes.'
     if (event.value) {
       event.value.participantsCount += 1
+      event.value.remainingPlaces = Math.max(0, Number(event.value.remainingPlaces || event.value.maxParticipants) - 1)
+      event.value.isFull = event.value.remainingPlaces === 0
     }
   } catch (err) {
     feedback.value = err?.response?.data?.message || 'Impossible de vous inscrire a cet evenement.'
@@ -83,8 +100,8 @@ async function register() {
 
         <div class="mt-8 grid gap-4 md:grid-cols-3">
           <div class="rounded-2xl border p-4" style="border-color:var(--border); background:var(--bg-card)">
-            <div class="text-xs uppercase tracking-[0.18em] text-muted">Date</div>
-            <div class="mt-2 text-sm font-semibold text-main">{{ formatDate(event.eventDate) }}</div>
+            <div class="text-xs uppercase tracking-[0.18em] text-muted">Horaires</div>
+            <div class="mt-2 text-sm font-semibold text-main">{{ formatRange(event.eventDate, event.endDate) }}</div>
           </div>
           <div class="rounded-2xl border p-4" style="border-color:var(--border); background:var(--bg-card)">
             <div class="text-xs uppercase tracking-[0.18em] text-muted">Lieu</div>
@@ -105,6 +122,9 @@ async function register() {
             <div class="h-full rounded-full" :style="`width:${capacityRatio}%; background:linear-gradient(90deg, #f97316, #fb923c)`"></div>
           </div>
           <p class="mt-3 text-sm text-sub">{{ capacityRatio }}% des places reservees.</p>
+          <p class="mt-2 text-sm font-semibold" :class="event.remainingPlaces === 0 ? 'text-red-500' : 'text-main'">
+            {{ event.remainingPlaces }} place{{ event.remainingPlaces > 1 ? 's' : '' }} restante{{ event.remainingPlaces > 1 ? 's' : '' }}
+          </p>
         </section>
 
         <section class="glass p-6">

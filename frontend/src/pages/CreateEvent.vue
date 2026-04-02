@@ -11,6 +11,7 @@ const form = reactive({
   title: '',
   description: '',
   eventDate: '',
+  endDate: '',
   location: '',
   maxParticipants: 50,
   isPublished: false,
@@ -40,6 +41,7 @@ onMounted(async () => {
     form.title = source.title || ''
     form.description = source.description || ''
     form.eventDate = toDatetimeLocal(source.eventDate)
+    form.endDate = toDatetimeLocal(source.endDate)
     form.location = source.location || ''
     form.maxParticipants = Number(source.maxParticipants || 50)
     form.isPublished = !!source.isPublished
@@ -58,6 +60,7 @@ async function submit() {
       ...form,
       maxParticipants: Number(form.maxParticipants),
       eventDate: form.eventDate ? new Date(form.eventDate).toISOString() : '',
+      endDate: form.endDate ? new Date(form.endDate).toISOString() : '',
     }
 
     const saved = isEditMode.value
@@ -111,10 +114,18 @@ async function submit() {
 
       <div class='grid sm:grid-cols-2 gap-4'>
         <div>
-          <label class='block text-xs font-semibold text-muted uppercase tracking-wider mb-2'>Date et heure *</label>
+          <label class='block text-xs font-semibold text-muted uppercase tracking-wider mb-2'>Debut *</label>
           <input v-model='form.eventDate' type='datetime-local' class='ef-input' />
           <p v-if='errors.eventDate' class='text-xs text-red-500 mt-1'>{{ errors.eventDate }}</p>
         </div>
+        <div>
+          <label class='block text-xs font-semibold text-muted uppercase tracking-wider mb-2'>Fin</label>
+          <input v-model='form.endDate' type='datetime-local' class='ef-input' />
+          <p v-if='errors.endDate' class='text-xs text-red-500 mt-1'>{{ errors.endDate }}</p>
+        </div>
+      </div>
+
+      <div class='grid sm:grid-cols-2 gap-4'>
         <div>
           <label class='block text-xs font-semibold text-muted uppercase tracking-wider mb-2'>Capacite *</label>
           <input v-model='form.maxParticipants' type='number' min='1' class='ef-input' />

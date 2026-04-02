@@ -21,6 +21,21 @@ function formatDate(value) {
     timeStyle: 'short',
   }).format(new Date(value))
 }
+
+function formatRange(start, end) {
+  if (!start) return 'Date a confirmer'
+  if (!end) return formatDate(start)
+
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  const sameDay = startDate.toDateString() === endDate.toDateString()
+
+  if (sameDay) {
+    return `${formatDate(start)} - ${new Intl.DateTimeFormat('fr-FR', { timeStyle: 'short' }).format(endDate)}`
+  }
+
+  return `${formatDate(start)} - ${formatDate(end)}`
+}
 </script>
 
 <template>
@@ -61,7 +76,7 @@ function formatDate(value) {
         <article v-for="event in featuredEvents" :key="event.id" class="ef-card p-6">
           <div class="flex items-center justify-between gap-3">
             <span class="badge-green">public</span>
-            <span class="text-xs text-muted">{{ formatDate(event.eventDate) }}</span>
+            <span class="text-xs text-muted">{{ formatRange(event.eventDate, event.endDate) }}</span>
           </div>
           <h4 class="mt-4 text-xl font-extrabold text-main">{{ event.title }}</h4>
           <p class="mt-3 line-clamp-3 text-sm leading-6 text-sub">{{ event.description }}</p>

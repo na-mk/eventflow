@@ -9,11 +9,15 @@ const eventsStore = useEventsStore()
 const feedback = ref('')
 
 onMounted(async () => {
-  await Promise.all([
-    authStore.user ? Promise.resolve() : authStore.fetchMe(),
-    eventsStore.fetchMyRegistrations(),
-    authStore.isOrganizer ? eventsStore.fetchMyEvents() : Promise.resolve(),
-  ])
+  if (!authStore.user && authStore.token) {
+    await authStore.fetchMe()
+  }
+
+  await eventsStore.fetchMyRegistrations()
+
+  if (authStore.isOrganizer) {
+    await eventsStore.fetchMyEvents()
+  }
 })
 
 const nextRegistration = computed(() => {
@@ -135,6 +139,9 @@ async function cancelRegistration(registrationId) {
               <h3 class="mt-3 text-xl font-extrabold text-main">{{ registration.event?.title }}</h3>
               <p class="mt-1 text-sm text-sub">
                 {{ formatDate(registration.event?.eventDate) }} · {{ registration.event?.location }}
+              </p>
+              <p class="mt-2 text-xs font-semibold text-sub">
+                {{ registration.event?.remainingPlaces }} place{{ registration.event?.remainingPlaces > 1 ? 's' : '' }} restante{{ registration.event?.remainingPlaces > 1 ? 's' : '' }}
               </p>
             </div>
 

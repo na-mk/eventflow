@@ -81,6 +81,18 @@ class EventController extends AbstractController
             return $this->json(['errors' => ['eventDate' => 'Invalid date format']], 422);
         }
 
+        if (!empty($data['endDate'])) {
+            try {
+                $event->setEndDate(new \DateTime($data['endDate']));
+            } catch (\Exception) {
+                return $this->json(['errors' => ['endDate' => 'Invalid date format']], 422);
+            }
+        }
+
+        if ($event->getEndDate() !== null && $event->getEndDate() <= $event->getEventDate()) {
+            return $this->json(['errors' => ['endDate' => 'End date must be after event date']], 422);
+        }
+
         $errors = $validator->validate($event);
         if (count($errors) > 0) {
             $messages = [];
@@ -123,6 +135,21 @@ class EventController extends AbstractController
                 return $this->json(['errors' => ['eventDate' => 'Invalid date format']], 422);
             }
         }
+        if (array_key_exists('endDate', $data)) {
+            if ($data['endDate']) {
+                try {
+                    $event->setEndDate(new \DateTime($data['endDate']));
+                } catch (\Exception) {
+                    return $this->json(['errors' => ['endDate' => 'Invalid date format']], 422);
+                }
+            } else {
+                $event->setEndDate(null);
+            }
+        }
+
+        if ($event->getEndDate() !== null && $event->getEndDate() <= $event->getEventDate()) {
+            return $this->json(['errors' => ['endDate' => 'End date must be after event date']], 422);
+        }
 
         $errors = $validator->validate($event);
         if (count($errors) > 0) {
@@ -164,11 +191,13 @@ class EventController extends AbstractController
             'title'              => $event->getTitle(),
             'description'        => $event->getDescription(),
             'eventDate'          => $event->getEventDate()?->format('c'),
+            'endDate'            => $event->getEndDate()?->format('c'),
             'location'           => $event->getLocation(),
             'maxParticipants'    => $event->getMaxParticipants(),
             'isPublished'        => $event->isPublished(),
             'createdAt'          => $event->getCreatedAt()?->format('c'),
             'participantsCount'  => $event->getConfirmedParticipantsCount(),
+            'remainingPlaces'    => $event->getRemainingPlaces(),
             'isFull'             => $event->isFull(),
             'organizer'          => [
                 'id'        => $event->getOrganizer()?->getId(),
