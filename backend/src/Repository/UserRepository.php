@@ -35,11 +35,13 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->getResult();
     }
 
-    public function findOldUsersToAnonymize(\DateTimeImmutable $before): array
+    public function findInactiveUsersToAnonymize(\DateTimeImmutable $before): array
     {
         return $this->createQueryBuilder('u')
-            ->where('u.createdAt < :before')
             ->andWhere('u.isAnonymized = false')
+            ->leftJoin('u.consentLogs', 'cl')
+            ->groupBy('u.id')
+            ->having('COALESCE(MAX(cl.timestamp), u.createdAt) < :before')
             ->setParameter('before', $before)
             ->getQuery()
             ->getResult();

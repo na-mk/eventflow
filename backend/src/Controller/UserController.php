@@ -96,10 +96,9 @@ class UserController extends AbstractController
         );
 
         // Anonymisation des données personnelles
-        $anonymousId = 'anon_' . $user->getId() . '_' . substr(hash('sha256', (string)$user->getId()), 0, 8);
-        $user->setEmail($anonymousId . '@anonymized.local');
-        $user->setFirstName('Anonymized');
-        $user->setLastName('User');
+        $user->setEmail(hash('sha256', (string) $user->getEmail()));
+        $user->setFirstName('Utilisateur supprimé');
+        $user->setLastName('Compte supprimé');
         $user->setPhone(null);
         $user->setIsAnonymized(true);
         $user->setConsentDate(null);

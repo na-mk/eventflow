@@ -126,8 +126,8 @@ eventflow/
 ### Inscriptions
 | Méthode | Endpoint | Accès | Description |
 |---|---|---|---|
-| POST | /api/registrations/{eventId} | Auth | S'inscrire à un événement |
-| DELETE | /api/registrations/{eventId} | Auth | Se désinscrire |
+| POST | /api/events/{id}/register | Auth | S'inscrire à un événement |
+| DELETE | /api/registrations/{id} | Auth | Annuler sa propre inscription |
 | GET | /api/registrations/my | Auth | Mes inscriptions |
 
 ### Profil & RGPD
@@ -138,13 +138,14 @@ eventflow/
 | DELETE | /api/me | Auth | Anonymiser mon compte (Art.17) |
 | GET | /api/me/export | Auth | Exporter mes données (Art.20) |
 | POST | /api/me/password | Auth | Changer de mot de passe |
+| POST | /api/consent | Auth | Mettre à jour ou retirer le consentement |
 
 ---
 
 ## Commandes utiles
 
 ```bash
-# Anonymiser les utilisateurs inactifs depuis 36 mois (RGPD)
+# Anonymiser les utilisateurs inactifs depuis 24 mois (RGPD)
 php bin/console app:anonymize-old-users
 
 # Anonymiser depuis 12 mois

@@ -11,20 +11,19 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/api/registrations')]
 class RegistrationController extends AbstractController
 {
-    // POST /api/registrations/{eventId} — s'inscrire à un événement
-    #[Route('/{eventId}', name: 'api_register_event', methods: ['POST'], requirements: ['eventId' => '\d+'])]
+    // POST /api/events/{id}/register — s'inscrire à un événement
+    #[Route('/api/events/{id}/register', name: 'api_register_event', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function register(
-        int $eventId,
+        int $id,
         EntityManagerInterface $em,
         RegistrationRepository $registrationRepo
     ): JsonResponse {
         /** @var User $user */
         $user = $this->getUser();
 
-        $event = $em->getRepository(Event::class)->find($eventId);
+        $event = $em->getRepository(Event::class)->find($id);
         if (!$event) {
             return $this->json(['message' => 'Event not found'], 404);
         }
@@ -34,7 +33,7 @@ class RegistrationController extends AbstractController
         }
 
         // Vérifier si déjà inscrit
-        $existing = $registrationRepo->findByUserAndEvent($user->getId(), $eventId);
+        $existing = $registrationRepo->findByUserAndEvent($user->getId(), $id);
         if ($existing) {
             return $this->json(['message' => 'Already registered to this event'], 409);
         }
@@ -55,19 +54,23 @@ class RegistrationController extends AbstractController
         return $this->json($this->serialize($registration), 201);
     }
 
-    // DELETE /api/registrations/{eventId} — se désinscrire
-    #[Route('/{eventId}', name: 'api_unregister_event', methods: ['DELETE'], requirements: ['eventId' => '\d+'])]
+    // DELETE /api/registrations/{id} — annuler sa propre inscription
+    #[Route('/api/registrations/{id}', name: 'api_unregister_event', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function unregister(
-        int $eventId,
+        int $id,
         EntityManagerInterface $em,
         RegistrationRepository $registrationRepo
     ): JsonResponse {
         /** @var User $user */
         $user = $this->getUser();
 
-        $registration = $registrationRepo->findByUserAndEvent($user->getId(), $eventId);
+        $registration = $registrationRepo->find($id);
         if (!$registration) {
             return $this->json(['message' => 'Registration not found'], 404);
+        }
+
+        if ($registration->getUser()?->getId() !== $user->getId()) {
+            return $this->json(['message' => 'Forbidden'], 403);
         }
 
         $registration->setStatus(Registration::STATUS_CANCELLED);
@@ -77,7 +80,7 @@ class RegistrationController extends AbstractController
     }
 
     // GET /api/registrations/my — mes inscriptions
-    #[Route('/my', name: 'api_my_registrations', methods: ['GET'])]
+    #[Route('/api/registrations/my', name: 'api_my_registrations', methods: ['GET'])]
     public function myRegistrations(RegistrationRepository $repo): JsonResponse
     {
         /** @var User $user */

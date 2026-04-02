@@ -1,8 +1,8 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/user'
-const userStore = useUserStore()
+import { useAuthStore } from '../stores/auth'
+const userStore = useAuthStore()
 const router = useRouter()
 const form = reactive({ firstName: '', lastName: '', email: '', password: '', phone: '', roles: ['ROLE_USER'], consentGiven: false })
 const errors = ref({})
@@ -19,7 +19,7 @@ async function submit() {
   if (!validate()) return
   try {
     await userStore.register({ firstName: form.firstName, lastName: form.lastName, email: form.email, password: form.password, phone: form.phone || null, roles: form.roles, consentGiven: form.consentGiven })
-    if (!userStore.error) router.push('/')
+    if (!userStore.error) router.push('/dashboard')
   } catch (err) {
     const e = err?.response?.data?.errors
     if (e) errors.value = e

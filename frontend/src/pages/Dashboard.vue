@@ -1,10 +1,10 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useEventsStore } from '../stores/events'
-import { useUserStore } from '../stores/user'
+import { useAuthStore } from '../stores/auth'
 
 const eventsStore = useEventsStore()
-const userStore = useUserStore()
+const userStore = useAuthStore()
 const q = ref('')
 const sortBy = ref('dateAsc')
 
@@ -62,7 +62,7 @@ async function handleDelete(id) {
         <option value="dateDesc">Date ↓</option>
         <option value="title">Titre A→Z</option>
       </select>
-      <router-link v-if="userStore.isOrganizer" to="/create" class="btn-primary h-12 px-6 rounded-xl whitespace-nowrap">
+      <router-link v-if="userStore.isOrganizer" to="/events/create" class="btn-primary h-12 px-6 rounded-xl whitespace-nowrap">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         Nouvel événement
       </router-link>
@@ -93,7 +93,7 @@ async function handleDelete(id) {
       <p class="text-muted text-sm mb-6">{{ q ? 'Essayez une autre recherche.' : 'Aucun événement publié pour le moment.' }}</p>
       <div class="flex justify-center gap-3">
         <button v-if="q" @click="q = ''" class="btn-ghost text-xs">Effacer</button>
-        <router-link v-if="userStore.isOrganizer" to="/create" class="btn-primary text-xs px-5 py-2.5">Créer le premier événement</router-link>
+        <router-link v-if="userStore.isOrganizer" to="/events/create" class="btn-primary text-xs px-5 py-2.5">Créer le premier événement</router-link>
       </div>
     </div>
 
@@ -119,9 +119,9 @@ async function handleDelete(id) {
 
         <!-- Corps -->
         <div class="p-5 flex flex-col flex-1">
-          <h3 class="font-bold text-main text-base leading-snug line-clamp-2 group-hover:text-orange-400 transition-colors mb-2">
+          <router-link :to="`/events/${event.id}`" class="font-bold text-main text-base leading-snug line-clamp-2 group-hover:text-orange-400 transition-colors mb-2">
             {{ event.title }}
-          </h3>
+          </router-link>
           <p class="text-sm text-slate-500 line-clamp-2">{{ event.description || 'Aucune description.' }}</p>
 
           <div class="mt-4 space-y-2.5">

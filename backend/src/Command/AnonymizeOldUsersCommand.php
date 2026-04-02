@@ -15,7 +15,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:anonymize-old-users',
-    description: 'Anonymize users who have not logged in for more than X months (RGPD compliance)',
+    description: 'Anonymize inactive users older than 2 years (RGPD compliance)',
 )]
 class AnonymizeOldUsersCommand extends Command
 {
@@ -34,7 +34,7 @@ class AnonymizeOldUsersCommand extends Command
             'm',
             InputOption::VALUE_OPTIONAL,
             'Number of months of inactivity before anonymization',
-            36
+            24
         );
     }
 
@@ -44,7 +44,7 @@ class AnonymizeOldUsersCommand extends Command
         $months = (int) $input->getOption('months');
 
         $before = new \DateTimeImmutable("-{$months} months");
-        $users = $this->userRepository->findOldUsersToAnonymize($before);
+        $users = $this->userRepository->findInactiveUsersToAnonymize($before);
 
         if (empty($users)) {
             $io->success("No users to anonymize (inactive since {$months} months).");
@@ -63,10 +63,10 @@ class AnonymizeOldUsersCommand extends Command
                 "Auto-anonymized: inactive for {$months}+ months"
             );
 
-            $anonymousId = 'anon_' . $user->getId() . '_' . substr(hash('sha256', (string)$user->getId()), 0, 8);
-            $user->setEmail($anonymousId . '@anonymized.local');
-            $user->setFirstName('Anonymized');
-            $user->setLastName('User');
+            $emailHash = hash('sha256', (string) $user->getEmail());
+            $user->setEmail($emailHash);
+            $user->setFirstName('Utilisateur supprimé');
+            $user->setLastName('Compte supprimé');
             $user->setPhone(null);
             $user->setIsAnonymized(true);
             $user->setConsentDate(null);

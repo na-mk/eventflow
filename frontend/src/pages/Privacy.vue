@@ -58,7 +58,7 @@
       </ul>
       <p class="mt-3">
         Exercez vos droits depuis la page
-        <router-link to="/my-data" class="text-indigo-600 hover:underline font-medium">Mes données</router-link>
+        <router-link to="/profile" class="text-indigo-600 hover:underline font-medium">Mes données</router-link>
         ou en contactant : dpo@eventflow.local
       </p>
     </section>

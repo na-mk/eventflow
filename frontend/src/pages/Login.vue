@@ -1,13 +1,13 @@
 <script setup>
 import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/user'
-const userStore = useUserStore()
+import { useAuthStore } from '../stores/auth'
+const userStore = useAuthStore()
 const router = useRouter()
 const form = reactive({ email: '', password: '' })
 async function submit() {
   await userStore.login(form)
-  if (!userStore.error) router.push('/')
+  if (!userStore.error) router.push('/dashboard')
 }
 </script>
 

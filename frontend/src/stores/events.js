@@ -10,6 +10,11 @@ export const useEventsStore = defineStore('events', {
   }),
 
   actions: {
+    async fetchEventById(id) {
+      const res = await api.get(`/events/${id}`)
+      return res.data
+    },
+
     async fetchEvents() {
       this.loading = true
       this.error = null
@@ -85,10 +90,21 @@ export const useEventsStore = defineStore('events', {
 
     async registerToEvent(eventId) {
       try {
-        const res = await api.post(`/registrations/${eventId}`)
+        const res = await api.post(`/events/${eventId}/register`)
         return res.data
       } catch (err) {
         this.error = err?.response?.data?.message || 'Erreur inscription'
+        throw err
+      }
+    },
+
+    async cancelRegistration(registrationId) {
+      try {
+        const res = await api.delete(`/registrations/${registrationId}`)
+        this.myRegistrations = this.myRegistrations.filter((registration) => registration.id !== registrationId)
+        return res.data
+      } catch (err) {
+        this.error = err?.response?.data?.message || 'Erreur annulation inscription'
         throw err
       }
     },
