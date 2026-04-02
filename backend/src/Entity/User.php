@@ -15,6 +15,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\HasLifecycleCallbacks]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    public const ROLE_PARTICIPANT = 'participant';
+    public const ROLE_ORGANIZER = 'organisateur';
+    public const ROLE_ADMIN = 'admin';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -72,7 +76,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->registrations = new ArrayCollection();
         $this->consentLogs = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
-        $this->roles = ['ROLE_USER'];
+        $this->roles = [self::ROLE_PARTICIPANT];
     }
 
     public function getId(): ?int { return $this->id; }
@@ -84,11 +88,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getRoles(): array
     {
-        $roles = $this->roles;
+        $roles = array_map([$this, 'mapStoredRoleToSecurityRole'], $this->roles);
         $roles[] = 'ROLE_USER';
-        return array_unique($roles);
+
+        return array_values(array_unique($roles));
     }
-    public function setRoles(array $roles): static { $this->roles = $roles; return $this; }
+
+    public function getStoredRoles(): array
+    {
+        if (empty($this->roles)) {
+            return [self::ROLE_PARTICIPANT];
+        }
+
+        return array_values(array_unique(array_map([$this, 'normalizeStoredRole'], $this->roles)));
+    }
+
+    public function setRoles(array $roles): static
+    {
+        $this->roles = array_values(array_unique(array_map([$this, 'normalizeStoredRole'], $roles)));
+        return $this;
+    }
 
     public function getPassword(): ?string { return $this->password; }
     public function setPassword(string $password): static { $this->password = $password; return $this; }
@@ -119,4 +138,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getOrganizedEvents(): Collection { return $this->organizedEvents; }
     public function getRegistrations(): Collection { return $this->registrations; }
     public function getConsentLogs(): Collection { return $this->consentLogs; }
+
+    private function normalizeStoredRole(string $role): string
+    {
+        return match (strtolower($role)) {
+            'role_admin', 'admin', 'administrateur' => self::ROLE_ADMIN,
+            'role_organizer', 'organizer', 'organisateur' => self::ROLE_ORGANIZER,
+            'role_user', 'role_participant', 'participant' => self::ROLE_PARTICIPANT,
+            default => self::ROLE_PARTICIPANT,
+        };
+    }
+
+    private function mapStoredRoleToSecurityRole(string $role): string
+    {
+        return match ($this->normalizeStoredRole($role)) {
+            self::ROLE_ADMIN => 'ROLE_ADMIN',
+            self::ROLE_ORGANIZER => 'ROLE_ORGANIZER',
+            default => 'ROLE_USER',
+        };
+    }
 }

@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 const userStore = useAuthStore()
 const router = useRouter()
-const form = reactive({ firstName: '', lastName: '', email: '', password: '', phone: '', roles: ['ROLE_USER'], consentGiven: false })
+const form = reactive({ firstName: '', lastName: '', email: '', password: '', phone: '', role: 'participant', consentGiven: false })
 const errors = ref({})
 function validate() {
   errors.value = {}
@@ -18,7 +18,15 @@ function validate() {
 async function submit() {
   if (!validate()) return
   try {
-    await userStore.register({ firstName: form.firstName, lastName: form.lastName, email: form.email, password: form.password, phone: form.phone || null, roles: form.roles, consentGiven: form.consentGiven })
+    await userStore.register({
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: form.email,
+      password: form.password,
+      phone: form.phone || null,
+      role: form.role,
+      consentGiven: form.consentGiven
+    })
     if (!userStore.error) router.push('/dashboard')
   } catch (err) {
     const e = err?.response?.data?.errors
@@ -77,9 +85,9 @@ async function submit() {
           </div>
           <div>
             <label class='block text-xs font-semibold text-muted uppercase tracking-wider mb-2'>Rôle</label>
-            <select v-model='form.roles[0]' class='ef-input'>
-              <option value='ROLE_USER'>Participant</option>
-              <option value='ROLE_ORGANIZER'>Organisateur</option>
+            <select v-model='form.role' class='ef-input'>
+              <option value='participant'>Participant</option>
+              <option value='organisateur'>Organisateur</option>
             </select>
           </div>
           <div class='p-4 rounded-xl bg-orange-500/10 border border-orange-500/20'>

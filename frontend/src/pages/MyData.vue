@@ -20,6 +20,13 @@ const consentStatusLabel = computed(() => {
   return consentGiven.value ? "Consentement actif" : "Consentement retire"
 })
 
+const roleLabel = computed(() => {
+  const roles = userStore.user?.roles || []
+  if (roles.includes('ROLE_ADMIN')) return 'Administrateur'
+  if (roles.includes('ROLE_ORGANIZER')) return 'Organisateur'
+  return 'Participant'
+})
+
 onMounted(async () => {
   if (!userStore.user && userStore.token) {
     await userStore.fetchMe()
@@ -126,8 +133,10 @@ async function anonymize() {
       <section class="glass p-6">
         <h2 class="text-xl font-extrabold text-main">Informations du compte</h2>
         <div class="mt-5 space-y-3 text-sm">
+          <p><span class="text-muted">Prenom :</span> <strong class="text-main">{{ userStore.user?.firstName }}</strong></p>
+          <p><span class="text-muted">Nom :</span> <strong class="text-main">{{ userStore.user?.lastName }}</strong></p>
           <p><span class="text-muted">Email :</span> <strong class="text-main">{{ userStore.user?.email }}</strong></p>
-          <p><span class="text-muted">Roles :</span> <strong class="text-main">{{ userStore.user?.roles?.join(', ') }}</strong></p>
+          <p><span class="text-muted">Role :</span> <strong class="text-main">{{ roleLabel }}</strong></p>
           <p>
             <span class="text-muted">Consentement donne le :</span>
             <strong class="text-main">

@@ -61,7 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchMe() {
     try {
       const res = await api.get('/me')
-      user.value = res.data.user
+      user.value = res.data?.user ?? res.data
       safeSetItem('user', JSON.stringify(user.value))
     } catch {
       logout()
