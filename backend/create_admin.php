@@ -3,12 +3,16 @@ require __DIR__ . '/vendor/autoload.php';
 
 use App\Kernel;
 use App\Entity\User;
+use Symfony\Component\Dotenv\Dotenv;
+use Symfony\Component\PasswordHasher\Hasher\NativePasswordHasher;
+
+(new Dotenv())->bootEnv(__DIR__ . '/.env');
 
 $kernel = new Kernel('dev', true);
 $kernel->boot();
 $container = $kernel->getContainer();
 $em = $container->get('doctrine')->getManager();
-$hasher = $container->get('security.user_password_hasher');
+$hasher = new NativePasswordHasher();
 
 $email = 'admin@eventflow.local';
 $password = 'Admin1234!';
@@ -27,7 +31,7 @@ $user->setLastName('User');
 $user->setRoles(['ROLE_ADMIN']);
 $user->setConsentDate(new \DateTimeImmutable());
 $user->setConsentVersion('1.0');
-$user->setPassword($hasher->hashPassword($user, $password));
+$user->setPassword($hasher->hash($password));
 
 $em->persist($user);
 $em->flush();
