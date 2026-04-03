@@ -6,6 +6,21 @@ const userStore = useAuthStore()
 const router = useRouter()
 const form = reactive({ firstName: '', lastName: '', email: '', password: '', phone: '', role: 'participant', consentGiven: false })
 const errors = ref({})
+
+function roleLabel(role) {
+  if (role === 'organisateur') return 'organisateur'
+  if (role === 'admin') return 'administrateur'
+  return 'participant'
+}
+
+function setRegistrationFlash(message) {
+  try {
+    sessionStorage.setItem('eventflow-registration-success', message)
+  } catch {
+    // Ignore storage issues to keep the registration flow usable.
+  }
+}
+
 function validate() {
   errors.value = {}
   if (!form.firstName) errors.value.firstName = 'Prénom requis'
@@ -27,7 +42,10 @@ async function submit() {
       role: form.role,
       consentGiven: form.consentGiven
     })
-    if (!userStore.error) router.push('/dashboard')
+    if (!userStore.error) {
+      setRegistrationFlash(`Inscription reussie. Votre compte ${roleLabel(form.role)} est maintenant actif.`)
+      router.push('/dashboard')
+    }
   } catch (err) {
     const e = err?.response?.data?.errors
     if (e) errors.value = e

@@ -1,0 +1,282 @@
+### EventFlow API collection
+### Compatible with VS Code REST Client extension
+### 1. Register users
+### 2. Run login requests to capture JWT tokens automatically
+### 3. Reuse the protected requests below
+
+@baseUrl = http://127.0.0.1:8000/api
+@participantEmail = participant.http@eventflow.test
+@participantPassword = Password123!
+@organizerEmail = organizer.http@eventflow.test
+@organizerPassword = Password123!
+@adminEmail = admin@eventflow.local
+@adminPassword = Admin1234!
+@eventId = 1
+@registrationId = 1
+
+###
+# Register participant - success
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{participantEmail}}",
+  "password": "{{participantPassword}}",
+  "firstName": "Paula",
+  "lastName": "Martin",
+  "phone": "0600000001",
+  "role": "participant",
+  "consentGiven": true
+}
+
+###
+# Register organizer - success
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{organizerEmail}}",
+  "password": "{{organizerPassword}}",
+  "firstName": "Oscar",
+  "lastName": "Bernard",
+  "phone": "0600000002",
+  "role": "organisateur",
+  "consentGiven": true
+}
+
+###
+# Register without consent - 422
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "noconsent@eventflow.test",
+  "password": "Password123!",
+  "firstName": "No",
+  "lastName": "Consent",
+  "role": "participant",
+  "consentGiven": false
+}
+
+###
+# Participant login
+# @name participantLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{participantEmail}}",
+  "password": "{{participantPassword}}"
+}
+
+> {% client.global.set("participantToken", response.body.token); %}
+
+###
+# Organizer login
+# @name organizerLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{organizerEmail}}",
+  "password": "{{organizerPassword}}"
+}
+
+> {% client.global.set("organizerToken", response.body.token); %}
+
+###
+# Admin login
+# @name adminLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+> {% client.global.set("adminToken", response.body.token); %}
+
+###
+# Public events list
+GET {{baseUrl}}/events
+Accept: application/json
+
+###
+# Public event detail
+GET {{baseUrl}}/events/{{eventId}}
+Accept: application/json
+
+###
+# Public event detail - 404
+GET {{baseUrl}}/events/999999
+Accept: application/json
+
+###
+# Unauthorized profile access - 401
+GET {{baseUrl}}/me
+Accept: application/json
+
+###
+# Organizer creates event - success
+# @name createEvent
+POST {{baseUrl}}/events
+Authorization: Bearer {{organizerToken}}
+Content-Type: application/json
+
+{
+  "title": "Conference Full Stack 2026",
+  "description": "Conference professionnelle autour de Symfony, Vue.js et du RGPD.",
+  "eventDate": "2026-05-15T09:00:00+02:00",
+  "endDate": "2026-05-15T17:30:00+02:00",
+  "location": "Paris",
+  "maxParticipants": 40,
+  "isPublished": true
+}
+
+> {% client.global.set("eventId", response.body.id); %}
+
+###
+# Participant cannot create event - 403
+POST {{baseUrl}}/events
+Authorization: Bearer {{participantToken}}
+Content-Type: application/json
+
+{
+  "title": "Event interdit",
+  "description": "Ce test doit retourner 403.",
+  "eventDate": "2026-05-20T10:00:00+02:00",
+  "location": "Lyon",
+  "maxParticipants": 10,
+  "isPublished": true
+}
+
+###
+# Organizer updates own event - success
+PUT {{baseUrl}}/events/{{eventId}}
+Authorization: Bearer {{organizerToken}}
+Content-Type: application/json
+
+{
+  "title": "Conference Full Stack 2026 - Edition mise a jour",
+  "endDate": "2026-05-15T18:00:00+02:00",
+  "isPublished": true
+}
+
+###
+# Invalid event update - 422
+PUT {{baseUrl}}/events/{{eventId}}
+Authorization: Bearer {{organizerToken}}
+Content-Type: application/json
+
+{
+  "endDate": "2026-05-15T08:00:00+02:00"
+}
+
+###
+# Participant registers to event - success
+# @name registerEvent
+POST {{baseUrl}}/events/{{eventId}}/register
+Authorization: Bearer {{participantToken}}
+Content-Type: application/json
+
+{}
+
+> {% client.global.set("registrationId", response.body.id); %}
+
+###
+# Participant registers twice - 409
+POST {{baseUrl}}/events/{{eventId}}/register
+Authorization: Bearer {{participantToken}}
+Content-Type: application/json
+
+{}
+
+###
+# Participant cancels own registration - success
+DELETE {{baseUrl}}/registrations/{{registrationId}}
+Authorization: Bearer {{participantToken}}
+Accept: application/json
+
+###
+# Participant cancels unknown registration - 404
+DELETE {{baseUrl}}/registrations/999999
+Authorization: Bearer {{participantToken}}
+Accept: application/json
+
+###
+# Authenticated profile (RGPD)
+GET {{baseUrl}}/me
+Authorization: Bearer {{participantToken}}
+Accept: application/json
+
+###
+# Rectify personal data
+PUT {{baseUrl}}/me
+Authorization: Bearer {{participantToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Paula",
+  "lastName": "Martin",
+  "phone": "0600000099"
+}
+
+###
+# Export personal data (bonus portability)
+GET {{baseUrl}}/me/export
+Authorization: Bearer {{participantToken}}
+Accept: application/json
+
+###
+# Update consent - withdraw
+POST {{baseUrl}}/consent
+Authorization: Bearer {{participantToken}}
+Content-Type: application/json
+
+{
+  "consentGiven": false,
+  "consentVersion": "1.0"
+}
+
+###
+# Update consent - give again
+POST {{baseUrl}}/consent
+Authorization: Bearer {{participantToken}}
+Content-Type: application/json
+
+{
+  "consentGiven": true,
+  "consentVersion": "1.0"
+}
+
+###
+# Organizer event list (includes drafts)
+GET {{baseUrl}}/events/all
+Authorization: Bearer {{organizerToken}}
+Accept: application/json
+
+###
+# Admin global event list
+GET {{baseUrl}}/events/all
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# Toggle publication
+PATCH {{baseUrl}}/events/{{eventId}}/publish
+Authorization: Bearer {{organizerToken}}
+Accept: application/json
+
+###
+# Delete event
+DELETE {{baseUrl}}/events/{{eventId}}
+Authorization: Bearer {{organizerToken}}
+Accept: application/json
+
+###
+# Anonymize current account
+# Run this at the very end only.
+DELETE {{baseUrl}}/me
+Authorization: Bearer {{participantToken}}
+Accept: application/json

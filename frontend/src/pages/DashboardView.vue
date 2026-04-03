@@ -1,14 +1,28 @@
 <script setup>
-import { computed, onMounted } from 'vue'
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useEventsStore } from '../stores/events'
 
 const authStore = useAuthStore()
 const eventsStore = useEventsStore()
 const feedback = ref('')
+const registrationSuccess = ref('')
+
+function consumeRegistrationFlash() {
+  try {
+    const message = sessionStorage.getItem('eventflow-registration-success')
+    if (!message) return
+
+    registrationSuccess.value = message
+    sessionStorage.removeItem('eventflow-registration-success')
+  } catch {
+    // Ignore storage issues and simply skip the flash message.
+  }
+}
 
 onMounted(async () => {
+  consumeRegistrationFlash()
+
   if (!authStore.user && authStore.token) {
     await authStore.fetchMe()
   }
@@ -54,6 +68,11 @@ async function cancelRegistration(registrationId) {
       <p class="mt-3 max-w-2xl text-base leading-7 text-sub">
         Retrouvez votre resume personnel, vos inscriptions et vos outils de gestion selon votre role.
       </p>
+    </div>
+
+    <div v-if="registrationSuccess" class="rounded-2xl border px-4 py-3 text-sm text-emerald-700"
+      style="background:rgba(16,185,129,0.09); border-color:rgba(16,185,129,0.22)">
+      {{ registrationSuccess }}
     </div>
 
     <div class="grid gap-4 md:grid-cols-3">
