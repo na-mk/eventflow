@@ -43,6 +43,14 @@ function formatTimeRange(start, end) {
   return `${startTime} - ${endTime}`
 }
 
+function organizerLabel(organizer) {
+  if (!organizer) return 'Organisateur'
+
+  const fullName = [organizer.firstName, organizer.lastName].filter(Boolean).join(' ').trim()
+
+  return fullName || organizer.email || 'Organisateur'
+}
+
 function accent(i) { return cardAccents[i % cardAccents.length] }
 
 const filteredEvents = computed(() => {
@@ -150,6 +158,12 @@ async function handleDelete(id) {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
               {{ event.location || 'Lieu non défini' }}
+            </div>
+            <div v-if="userStore.isAuthenticated" class="flex items-center gap-2 text-xs text-slate-400">
+              <svg class="w-3.5 h-3.5 text-slate-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>Interlocuteur : <strong class="text-main">{{ organizerLabel(event.organizer) }}</strong></span>
             </div>
             <div class="flex items-center gap-2 text-xs text-slate-400">
               <svg class="w-3.5 h-3.5 text-slate-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

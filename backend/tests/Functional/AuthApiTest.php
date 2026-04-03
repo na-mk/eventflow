@@ -72,4 +72,35 @@ class AuthApiTest extends ApiTestCase
         self::assertArrayHasKey('token', $data);
         self::assertNotEmpty($data['token']);
     }
+
+    public function testAuthenticatedUserCanExportPersonalData(): void
+    {
+        $user = $this->createUser([
+            'email' => 'export@eventflow.test',
+            'firstName' => 'Eva',
+            'lastName' => 'Durand',
+            'phone' => '0607080910',
+            'role' => 'participant',
+        ]);
+
+        $log = new ConsentLog();
+        $log
+            ->setUser($user)
+            ->setAction(ConsentLog::ACTION_CONSENT_GIVEN)
+            ->setDetails('Initial consent');
+
+        $this->em->persist($log);
+        $this->em->flush();
+
+        $this->jsonRequest('GET', '/api/me/export', null, $this->authHeaders($user));
+
+        self::assertResponseIsSuccessful();
+
+        $data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('export@eventflow.test', $data['personalData']['email']);
+        self::assertSame('Eva', $data['personalData']['firstName']);
+        self::assertNotEmpty($data['consentLogs']);
+        self::assertContains(ConsentLog::ACTION_CONSENT_GIVEN, array_column($data['consentLogs'], 'action'));
+    }
 }

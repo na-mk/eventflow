@@ -34,6 +34,20 @@ const capacityRatio = computed(() => {
   return Math.min(Math.round((Number(event.value?.participantsCount || 0) / max) * 100), 100)
 })
 
+const mapEmbedUrl = computed(() => {
+  const location = event.value?.location?.trim()
+  if (!location) return ''
+
+  return `https://maps.google.com/maps?q=${encodeURIComponent(location)}&z=15&output=embed`
+})
+
+const mapSearchUrl = computed(() => {
+  const location = event.value?.location?.trim()
+  if (!location) return ''
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`
+})
+
 function formatDate(value) {
   if (!value) return 'Date a confirmer'
   return new Intl.DateTimeFormat('fr-FR', {
@@ -142,6 +156,42 @@ async function register() {
           <div v-else class="badge-orange mt-5">Aucune place disponible</div>
         </section>
       </div>
+
+      <section class="glass p-6 md:p-8">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div class="section-label mb-2">Localisation</div>
+            <h2 class="text-2xl font-extrabold text-main">Voir le lieu sur la carte</h2>
+          </div>
+          <a
+            v-if="mapSearchUrl"
+            :href="mapSearchUrl"
+            target="_blank"
+            rel="noreferrer"
+            class="btn-ghost text-sm"
+          >
+            Ouvrir dans Google Maps
+          </a>
+        </div>
+
+        <p class="mt-3 text-sm text-sub">
+          {{ event.location || 'Lieu a confirmer' }}
+        </p>
+
+        <div class="mt-6 overflow-hidden rounded-3xl border" style="border-color:var(--border); background:var(--bg-card)">
+          <iframe
+            v-if="mapEmbedUrl"
+            :src="mapEmbedUrl"
+            title="Carte de localisation de l evenement"
+            class="h-[360px] w-full border-0"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          />
+          <div v-else class="grid h-[220px] place-items-center px-6 text-center text-sm text-sub">
+            La carte sera disponible dès qu'une localisation précise sera renseignée.
+          </div>
+        </div>
+      </section>
     </template>
   </section>
 </template>

@@ -11,6 +11,7 @@ import EventFormView from '../pages/CreateEvent.vue'
 import ProfileView from '../pages/MyData.vue'
 import PrivacyView from '../pages/Privacy.vue'
 import AdminView from '../pages/Admin.vue'
+import ContactView from '../pages/Contact.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
@@ -43,6 +44,7 @@ const routes = [
     component: ProfileView,
     meta: { requiresAuth: true },
   },
+  { path: '/contact', name: 'contact', component: ContactView },
   { path: '/privacy', name: 'privacy', component: PrivacyView },
 
   // Legacy aliases kept for compatibility with the existing project.
@@ -65,11 +67,21 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
   if (authStore.token && !authStore.user) {
-    await authStore.fetchMe()
+    try {
+      await authStore.fetchMe()
+    } catch (err) {
+      if (err?.response?.status === 401 && to.name !== 'login') {
+        return { name: 'login', query: { redirect: to.fullPath } }
+      }
+    }
+  }
+
+  if ((to.name === 'login' || to.name === 'register') && authStore.isAuthenticated) {
+    return typeof to.query.redirect === 'string' ? to.query.redirect : { name: 'home' }
   }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return { name: 'login' }
+    return { name: 'login', query: { redirect: to.fullPath } }
   }
 
   if (to.meta.roles && to.meta.roles.length > 0) {

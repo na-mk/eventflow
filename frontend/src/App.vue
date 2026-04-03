@@ -40,10 +40,12 @@ onMounted(async () => {
 
         <!-- Nav centre (desktop) -->
         <nav class="hidden md:flex items-center gap-6">
+          <router-link class="nav-link" to="/">Accueil</router-link>
           <router-link class="nav-link" to="/events">Événements</router-link>
           <router-link v-if="userStore.isAuthenticated" class="nav-link" to="/dashboard">Dashboard</router-link>
           <router-link v-if="userStore.isOrganizer" class="nav-link" to="/events/create">Créer</router-link>
           <router-link v-if="userStore.isAdmin" class="nav-link" to="/admin">Admin</router-link>
+          <router-link class="nav-link" to="/contact">Contact</router-link>
           <router-link class="nav-link" to="/privacy">Confidentialité</router-link>
         </nav>
 
@@ -112,10 +114,12 @@ onMounted(async () => {
       <Transition name="slide-up">
         <div v-if="mobileOpen" class="md:hidden border-t px-6 py-4 space-y-1"
              style="border-color:var(--border);background:var(--bg-card)">
+          <router-link @click="mobileOpen=false" class="block py-2 text-sm text-sub hover:text-main transition-colors" to="/">Accueil</router-link>
           <router-link @click="mobileOpen=false" class="block py-2 text-sm text-sub hover:text-main transition-colors" to="/events">Événements</router-link>
           <router-link v-if="userStore.isAuthenticated" @click="mobileOpen=false" class="block py-2 text-sm text-sub hover:text-main transition-colors" to="/dashboard">Dashboard</router-link>
           <router-link v-if="userStore.isOrganizer" @click="mobileOpen=false" class="block py-2 text-sm text-sub hover:text-main transition-colors" to="/events/create">Créer un événement</router-link>
           <router-link v-if="userStore.isAdmin" @click="mobileOpen=false" class="block py-2 text-sm text-sub hover:text-main transition-colors" to="/admin">Administration</router-link>
+          <router-link @click="mobileOpen=false" class="block py-2 text-sm text-sub hover:text-main transition-colors" to="/contact">Contact</router-link>
           <router-link @click="mobileOpen=false" class="block py-2 text-sm text-sub hover:text-main transition-colors" to="/privacy">Confidentialité</router-link>
           <div class="pt-3 border-t flex flex-col gap-2" style="border-color:var(--border)">
             <template v-if="!userStore.isAuthenticated">
@@ -211,6 +215,8 @@ onMounted(async () => {
           <span class="text-sm text-muted">EVENTFLOW — Symfony 6.4 + Vue 3</span>
         </div>
         <div class="flex items-center gap-6 text-xs text-muted">
+          <router-link to="/" class="hover:text-sub transition">Accueil</router-link>
+          <router-link to="/contact" class="hover:text-sub transition">Contact</router-link>
           <router-link to="/privacy" class="hover:text-sub transition">Politique de confidentialité</router-link>
           <router-link v-if="userStore.isAuthenticated" to="/profile" class="hover:text-sub transition">Mes données (RGPD)</router-link>
           <span>© 2026</span>

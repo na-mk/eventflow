@@ -4,6 +4,68 @@ namespace App\Tests\Functional;
 
 class EventApiTest extends ApiTestCase
 {
+    public function testParticipantCannotRegisterToTwoOverlappingEvents(): void
+    {
+        $organizer = $this->createUser([
+            'email' => 'schedule-organizer@eventflow.test',
+            'role' => 'organisateur',
+        ]);
+        $participant = $this->createUser([
+            'email' => 'schedule-participant@eventflow.test',
+            'role' => 'participant',
+        ]);
+
+        $firstEvent = $this->createEvent($organizer, [
+            'title' => 'Atelier du matin',
+            'eventDate' => new \DateTimeImmutable('+5 days 10:00'),
+            'endDate' => new \DateTimeImmutable('+5 days 12:00'),
+        ]);
+        $overlappingEvent = $this->createEvent($organizer, [
+            'title' => 'Table ronde',
+            'eventDate' => new \DateTimeImmutable('+5 days 11:00'),
+            'endDate' => new \DateTimeImmutable('+5 days 13:00'),
+        ]);
+
+        $this->jsonRequest('POST', '/api/events/'.$firstEvent->getId().'/register', null, $this->authHeaders($participant));
+        self::assertResponseStatusCodeSame(201);
+
+        $this->jsonRequest('POST', '/api/events/'.$overlappingEvent->getId().'/register', null, $this->authHeaders($participant));
+        self::assertResponseStatusCodeSame(409);
+
+        $data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('You are already registered for another event at the same time', $data['message']);
+    }
+
+    public function testParticipantCanRegisterToTwoNonOverlappingEvents(): void
+    {
+        $organizer = $this->createUser([
+            'email' => 'calendar-organizer@eventflow.test',
+            'role' => 'organisateur',
+        ]);
+        $participant = $this->createUser([
+            'email' => 'calendar-participant@eventflow.test',
+            'role' => 'participant',
+        ]);
+
+        $morningEvent = $this->createEvent($organizer, [
+            'title' => 'Petit dejeuner reseau',
+            'eventDate' => new \DateTimeImmutable('+6 days 08:00'),
+            'endDate' => new \DateTimeImmutable('+6 days 09:00'),
+        ]);
+        $afternoonEvent = $this->createEvent($organizer, [
+            'title' => 'Conference de l apres-midi',
+            'eventDate' => new \DateTimeImmutable('+6 days 14:00'),
+            'endDate' => new \DateTimeImmutable('+6 days 16:00'),
+        ]);
+
+        $this->jsonRequest('POST', '/api/events/'.$morningEvent->getId().'/register', null, $this->authHeaders($participant));
+        self::assertResponseStatusCodeSame(201);
+
+        $this->jsonRequest('POST', '/api/events/'.$afternoonEvent->getId().'/register', null, $this->authHeaders($participant));
+        self::assertResponseStatusCodeSame(201);
+    }
+
     public function testOrganizerCanCreateEvent(): void
     {
         $organizer = $this->createUser([

@@ -43,6 +43,15 @@ class RegistrationController extends AbstractController
             return $this->json(['message' => 'Event is full'], 422);
         }
 
+        if ($registrationRepo->hasScheduleConflictForUser(
+            $user->getId(),
+            $event->getEventDate(),
+            $event->getEndDate(),
+            $event->getId()
+        )) {
+            return $this->json(['message' => 'You are already registered for another event at the same time'], 409);
+        }
+
         $registration = new Registration();
         $registration->setUser($user);
         $registration->setEvent($event);

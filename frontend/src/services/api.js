@@ -1,39 +1,40 @@
 import axios from "axios"
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api"
+const BASE_URL = import.meta.env.VITE_API_URL || "/api"
+let inMemoryToken = ""
+
+function emitAuthEvent(name) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(name))
+  }
+}
+
+function getStoredToken() {
+  return inMemoryToken || (
+    localStorage.getItem("token") ||
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("jwt") ||
+    ""
+  )
+}
+
+export function syncApiToken(token) {
+  inMemoryToken = token || ""
+
+  if (inMemoryToken) {
+    api.defaults.headers.common.Authorization = `Bearer ${inMemoryToken}`
+  } else {
+    delete api.defaults.headers.common.Authorization
+  }
+}
 
 function clearStoredAuth() {
   localStorage.removeItem("token")
   localStorage.removeItem("access_token")
   localStorage.removeItem("jwt")
   localStorage.removeItem("user")
-}
-
-function normalizeUrl(url = "") {
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    try {
-      return new URL(url).pathname
-    } catch {
-      return url
-    }
-  }
-
-  return url
-}
-
-function isPublicRequest(config) {
-  const method = (config?.method || "get").toLowerCase()
-  const url = normalizeUrl(config?.url || "")
-
-  if (method === "get" && (url === "/events" || /^\/events\/[^/]+$/.test(url))) {
-    return true
-  }
-
-  if (method === "post" && (url === "/auth/login" || url === "/auth/register")) {
-    return true
-  }
-
-  return false
+  syncApiToken("")
+  emitAuthEvent("eventflow:auth-cleared")
 }
 
 export const api = axios.create({
@@ -42,14 +43,13 @@ export const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token =
-    localStorage.getItem("token") ||
-    localStorage.getItem("access_token") ||
-    localStorage.getItem("jwt")
+  const token = getStoredToken()
 
-  if (token && !isPublicRequest(config)) {
+  config.headers = config.headers || {}
+
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`
-  } else if (config?.headers?.Authorization) {
+  } else {
     delete config.headers.Authorization
   }
 
@@ -61,9 +61,25 @@ api.interceptors.response.use(
   (error) => {
     const status = error?.response?.status
     const responseMessage = error?.response?.data?.message || ""
+    const currentToken = getStoredToken()
+    const requestAuthorization =
+      error?.config?.headers?.Authorization ||
+      error?.config?.headers?.authorization ||
+      ""
+    const failedToken = requestAuthorization.startsWith("Bearer ")
+      ? requestAuthorization.slice("Bearer ".length)
+      : ""
+    const shouldResetSession =
+      status === 401 &&
+      /expired jwt token|invalid jwt token|jwt token not found/i.test(responseMessage) &&
+      (!failedToken || failedToken === currentToken)
 
-    if (status === 401 && /expired jwt token|invalid jwt token|jwt token not found/i.test(responseMessage)) {
+    if (shouldResetSession) {
       clearStoredAuth()
+
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+        window.location.assign("/login")
+      }
     }
 
     console.error("API ERROR:", {

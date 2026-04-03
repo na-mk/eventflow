@@ -1,13 +1,25 @@
 <script setup>
-import { reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, reactive } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 const userStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const form = reactive({ email: '', password: '' })
+
+onMounted(() => {
+  if (userStore.isAuthenticated) {
+    router.replace(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
+  }
+})
+
 async function submit() {
-  await userStore.login(form)
-  if (!userStore.error) router.push('/dashboard')
+  try {
+    await userStore.login(form)
+    router.replace(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
+  } catch {
+    // Error state is already handled by the auth store.
+  }
 }
 </script>
 

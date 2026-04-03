@@ -1,6 +1,8 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { api } from '../services/api'
+import { api, syncApiToken } from '../services/api'
+
+let authSyncInitialized = false
 
 function safeGetItem(key) {
   try {
@@ -44,6 +46,20 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref(null)
 
+  syncApiToken(token.value)
+
+  function syncFromStorage() {
+    token.value = safeGetItem('token')
+    user.value = safeParseUser()
+    syncApiToken(token.value)
+  }
+
+  if (!authSyncInitialized && typeof window !== 'undefined') {
+    window.addEventListener('eventflow:auth-cleared', syncFromStorage)
+    window.addEventListener('storage', syncFromStorage)
+    authSyncInitialized = true
+  }
+
   const isAuthenticated = computed(() => !!token.value)
   const isOrganizer = computed(() => {
     const roles = user.value?.roles || []
@@ -63,8 +79,17 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await api.get('/me')
       user.value = res.data?.user ?? res.data
       safeSetItem('user', JSON.stringify(user.value))
-    } catch {
-      logout()
+      error.value = null
+      return user.value
+    } catch (err) {
+      const status = err?.response?.status
+      error.value = err?.response?.data?.message || 'Unable to load profile'
+
+      if (status === 401) {
+        logout()
+      }
+
+      throw err
     }
   }
 
@@ -76,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await api.post('/auth/login', credentials)
       token.value = res.data.token
       safeSetItem('token', token.value)
+      syncApiToken(token.value)
       await fetchMe()
     } catch (err) {
       error.value = err?.response?.data?.message || 'Login failed'
@@ -139,6 +165,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     safeRemoveItem('token')
     safeRemoveItem('user')
+    syncApiToken('')
   }
 
   return {

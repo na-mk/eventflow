@@ -31,6 +31,9 @@ security:
     access_control:
         - { path: ^/api/auth/login, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
+        - { path: ^/api/contact, roles: PUBLIC_ACCESS, methods: [POST] }
+        - { path: ^/api/contact, roles: ROLE_ADMIN, methods: [GET] }
+        - { path: ^/api/contact/\d+/status$, roles: ROLE_ADMIN, methods: [PATCH] }
         - { path: ^/api/events$, roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/events/\d+$, roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }

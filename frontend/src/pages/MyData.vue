@@ -83,6 +83,9 @@ async function updateConsent(nextValue) {
 }
 
 async function exportData() {
+  error.value = ""
+  success.value = ""
+
   try {
     const res = await api.get('/me/export')
     const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
@@ -92,8 +95,9 @@ async function exportData() {
     a.download = 'mes-donnees-eventflow.json'
     a.click()
     URL.revokeObjectURL(url)
-  } catch {
-    error.value = "Erreur lors de l'export."
+    success.value = "Export telecharge avec succes."
+  } catch (err) {
+    error.value = err?.response?.data?.message || "Erreur lors de l'export."
   }
 }
 

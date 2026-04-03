@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useEventsStore } from '../stores/events'
 import { useAuthStore } from '../stores/auth'
+import { api } from '../services/api'
 
 const eventsStore = useEventsStore()
 const userStore = useAuthStore()
@@ -17,6 +18,10 @@ const editingId = ref(null)
 const editOpen = ref(false)
 const createOpen = ref(false)
 const createErrors = ref({})
+const contactMessages = ref([])
+const contactLoading = ref(false)
+const contactStatusLoadingId = ref(null)
+const contactStatusFilter = ref('all')
 
 const editForm = reactive({
   title: '',
@@ -48,7 +53,23 @@ async function loadEvents() {
   await eventsStore.fetchMyEvents()
 }
 
-onMounted(loadEvents)
+async function loadContactMessages() {
+  contactLoading.value = true
+
+  try {
+    const res = await api.get('/contact')
+    contactMessages.value = Array.isArray(res.data) ? res.data : []
+  } catch (error) {
+    localError.value = error?.response?.data?.message || 'Impossible de charger les messages de contact.'
+  } finally {
+    contactLoading.value = false
+  }
+}
+
+onMounted(async () => {
+  await loadEvents()
+  await loadContactMessages()
+})
 
 const adminEvents = computed(() => [...eventsStore.events])
 
@@ -146,6 +167,14 @@ const spotlightEvent = computed(() => {
     })[0] || null
 })
 
+const filteredContactMessages = computed(() => {
+  if (contactStatusFilter.value === 'all') {
+    return contactMessages.value
+  }
+
+  return contactMessages.value.filter((message) => message.status === contactStatusFilter.value)
+})
+
 function capacityRatio(event) {
   const max = Number(event.maxParticipants || 0)
   if (!max) return 0
@@ -189,6 +218,18 @@ function organizerName(event) {
 
 function isPast(event) {
   return new Date(event.eventDate) < new Date()
+}
+
+function contactStatusLabel(status) {
+  if (status === 'processed') return 'traite'
+  if (status === 'read') return 'lu'
+  return 'nouveau'
+}
+
+function contactStatusClass(status) {
+  if (status === 'processed') return 'badge-green'
+  if (status === 'read') return 'badge-blue'
+  return 'badge-orange'
 }
 
 function openEditor(event) {
@@ -291,6 +332,21 @@ async function deleteEvent(event) {
     localError.value = error?.response?.data?.message || 'Impossible de supprimer cet evenement.'
   }
 }
+
+async function updateContactStatus(message, status) {
+  resetMessages()
+  contactStatusLoadingId.value = message.id
+
+  try {
+    await api.patch(`/contact/${message.id}/status`, { status })
+    message.status = status
+    successMessage.value = 'Statut du message mis a jour.'
+  } catch (error) {
+    localError.value = error?.response?.data?.message || 'Impossible de mettre a jour ce message.'
+  } finally {
+    contactStatusLoadingId.value = null
+  }
+}
 </script>
 
 <template>
@@ -388,6 +444,97 @@ async function deleteEvent(event) {
         </div>
       </article>
     </div>
+
+    <section class="glass p-6">
+      <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div class="section-label mb-2">Contact</div>
+          <h2 class="text-2xl font-extrabold text-main">Messages recus</h2>
+          <p class="mt-3 max-w-2xl text-sm leading-7 text-sub">
+            Consultez les demandes envoyees depuis la page de contact pour prioriser les reponses et suivre les besoins
+            des utilisateurs.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <select v-model="contactStatusFilter" class="ef-input min-w-[180px]">
+            <option value="all">Tous les statuts</option>
+            <option value="new">Nouveaux</option>
+            <option value="read">Lus</option>
+            <option value="processed">Traites</option>
+          </select>
+          <button class="btn-outline" @click="loadContactMessages()">Actualiser les messages</button>
+        </div>
+      </div>
+
+      <div class="mt-4 rounded-2xl border px-4 py-3 text-sm text-sub"
+        style="background:var(--border-light); border-color:var(--border)">
+        {{ filteredContactMessages.length }} message(s) affiché(s) sur {{ contactMessages.length }}.
+      </div>
+
+      <div v-if="contactLoading" class="mt-6 grid gap-4 lg:grid-cols-2">
+        <div v-for="index in 2" :key="index" class="ef-card animate-pulse p-6">
+          <div class="h-5 w-32 rounded" style="background:var(--border)"></div>
+          <div class="mt-4 h-4 w-2/3 rounded" style="background:var(--border-light)"></div>
+          <div class="mt-2 h-4 w-full rounded" style="background:var(--border-light)"></div>
+          <div class="mt-6 h-20 rounded-2xl" style="background:var(--border-light)"></div>
+        </div>
+      </div>
+
+      <div v-else-if="filteredContactMessages.length === 0" class="mt-6 rounded-2xl border p-6 text-sm text-sub"
+        style="border-color:var(--border); background:var(--bg-card)">
+        Aucun message ne correspond au filtre selectionne.
+      </div>
+
+      <div v-else class="mt-6 grid gap-4 lg:grid-cols-2">
+        <article v-for="message in filteredContactMessages" :key="message.id" class="ef-card p-6">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 class="text-xl font-extrabold text-main">{{ message.subject }}</h3>
+              <p class="mt-2 text-sm text-sub">
+                {{ message.name }} · {{ message.email }}
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <span :class="contactStatusClass(message.status)">{{ contactStatusLabel(message.status) }}</span>
+              <span class="badge-blue">{{ formatDate(message.createdAt, { dateStyle: 'medium', timeStyle: 'short' }) }}</span>
+            </div>
+          </div>
+
+          <div class="mt-5 rounded-2xl border p-4 text-sm leading-6 text-sub"
+            style="border-color:var(--border); background:var(--border-light)">
+            {{ message.message }}
+          </div>
+
+          <div class="mt-5 flex flex-wrap gap-3">
+            <a class="btn-outline" :href="`mailto:${message.email}?subject=${encodeURIComponent(`Re: ${message.subject}`)}`">
+              Repondre par email
+            </a>
+            <button
+              class="btn-outline"
+              :disabled="contactStatusLoadingId === message.id || message.status === 'read'"
+              @click="updateContactStatus(message, 'read')"
+            >
+              {{ contactStatusLoadingId === message.id ? 'Mise a jour...' : 'Marquer comme lu' }}
+            </button>
+            <button
+              class="btn-primary"
+              :disabled="contactStatusLoadingId === message.id || message.status === 'processed'"
+              @click="updateContactStatus(message, 'processed')"
+            >
+              {{ contactStatusLoadingId === message.id ? 'Mise a jour...' : 'Marquer comme traite' }}
+            </button>
+            <button
+              class="btn-ghost"
+              :disabled="contactStatusLoadingId === message.id || message.status === 'new'"
+              @click="updateContactStatus(message, 'new')"
+            >
+              Revenir a nouveau
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
 
     <section class="glass p-6">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
