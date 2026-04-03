@@ -18,7 +18,6 @@ final class Version20260403110000 extends AbstractMigration
     {
         return 'postgresql' === $this->connection->getDatabasePlatform()->getName();
     }
-
     public function getDescription(): string
     {
         return 'Add end date to event table';
@@ -46,7 +45,6 @@ final class Version20260403110000 extends AbstractMigration
         if (! $this->isMySql() && ! $this->isPostgreSql()) {
             $this->abortIf(true, sprintf('Unsupported database platform: %s', $this->connection->getDatabasePlatform()->getName()));
         }
-
         $this->addSql('ALTER TABLE event DROP end_date');
     }
 }
