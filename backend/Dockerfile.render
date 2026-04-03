@@ -1,0 +1,20 @@
+FROM php:8.2-cli
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git unzip libzip-dev openssl \
+    && docker-php-ext-install pdo_mysql zip \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+
+COPY composer.json composer.lock symfony.lock ./
+RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts
+
+COPY . .
+
+RUN chmod +x render-start.sh \
+    && mkdir -p var/jwt
+
+CMD ["sh", "./render-start.sh"]

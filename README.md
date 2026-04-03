@@ -205,6 +205,109 @@ Depuis `frontend/` :
 npm run build
 ```
 
+## Docker
+
+Une stack Docker est fournie à la racine du projet :
+- `mysql`
+- `backend`
+- `frontend`
+- `nginx`
+
+Lancement :
+
+```bash
+docker compose up --build
+```
+
+Accès :
+- application via `http://localhost`
+- API via `http://localhost/api`
+
+## CI
+
+Une GitHub Action est fournie dans `.github/workflows/backend-tests.yml`.
+
+Elle exécute automatiquement :
+- installation des dépendances backend
+- génération d'une paire JWT
+- `php bin/phpunit`
+
+## Déploiement sur Render
+
+Une configuration Render Blueprint est fournie dans `render.yaml`.
+
+### Services Render recommandés
+
+- `eventflow-api` : Web Service Docker pour Symfony
+- `eventflow-front` : Static Site pour Vue/Vite
+- une base MySQL Render ou un service MySQL privé Render à créer côté dashboard
+
+### Variables à définir sur Render
+
+Pour `eventflow-api` :
+- `DATABASE_URL`
+- `JWT_PRIVATE_KEY_B64`
+- `JWT_PUBLIC_KEY_B64`
+- `CORS_ALLOW_ORIGIN`
+
+Pour `eventflow-front` :
+- `VITE_API_URL`
+
+### Valeurs conseillées
+
+`DATABASE_URL` :
+
+```env
+mysql://USER:PASSWORD@MYSQL_HOST:3306/eventflow?serverVersion=8.0&charset=utf8mb4
+```
+
+`CORS_ALLOW_ORIGIN` :
+
+```env
+^https://.*onrender\.com$
+```
+
+`VITE_API_URL` :
+
+```env
+https://eventflow-api.onrender.com/api
+```
+
+### JWT sur Render
+
+Le backend Render attend les clés JWT au format Base64 dans :
+- `JWT_PRIVATE_KEY_B64`
+- `JWT_PUBLIC_KEY_B64`
+
+Tu peux générer ces valeurs localement avec :
+
+```bash
+base64 -w 0 backend/config/jwt/private.pem
+base64 -w 0 backend/config/jwt/public.pem
+```
+
+Sur PowerShell :
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("backend/config/jwt/private.pem"))
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("backend/config/jwt/public.pem"))
+```
+
+### Déploiement
+
+1. Push ton dépôt sur GitHub.
+2. Sur Render, crée un nouveau Blueprint depuis ce repo.
+3. Fournis les variables manquantes demandées.
+4. Crée la base MySQL Render si elle n'existe pas déjà.
+5. Mets l'URL MySQL finale dans `DATABASE_URL`.
+6. Déploie d'abord `eventflow-api`, puis `eventflow-front`.
+
+Références officielles Render :
+- Blueprints : https://render.com/docs/infrastructure-as-code
+- Web services : https://render.com/docs/web-services
+- Static sites : https://render.com/docs/static-sites
+- MySQL : https://render.com/docs/deploy-mysql
+
 ## Tests et livrables
 
 Le projet contient :
