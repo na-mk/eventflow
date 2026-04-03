@@ -4,9 +4,10 @@ set -eu
 export APP_ENV="${APP_ENV:-prod}"
 export APP_DEBUG="${APP_DEBUG:-0}"
 
-if [ ! -f .env ]; then
-  touch .env
-fi
+cat > .env <<EOF
+APP_ENV=${APP_ENV}
+APP_DEBUG=${APP_DEBUG}
+EOF
 
 mkdir -p var/jwt
 
