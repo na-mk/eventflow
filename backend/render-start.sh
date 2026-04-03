@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
+if [ ! -f .env ] && [ -f .env.example ]; then
+  cp .env.example .env
+fi
+
 mkdir -p var/jwt
 
 if [ -n "${JWT_PRIVATE_KEY_B64:-}" ]; then
