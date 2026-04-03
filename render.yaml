@@ -1,3 +1,11 @@
+databases:
+  - name: eventflow-db
+    plan: free
+    region: frankfurt
+    databaseName: eventflow
+    user: eventflow
+    postgresMajorVersion: "16"
+
 services:
   - type: web
     name: eventflow-api
@@ -16,7 +24,9 @@ services:
       - key: APP_SECRET
         generateValue: true
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: eventflow-db
+          property: connectionString
       - key: JWT_SECRET_KEY
         value: /app/var/jwt/private.pem
       - key: JWT_PUBLIC_KEY
@@ -30,7 +40,7 @@ services:
       - key: JWT_PUBLIC_KEY_B64
         sync: false
       - key: CORS_ALLOW_ORIGIN
-        sync: false
+        value: ^https://.*onrender\.com$
 
   - type: web
     runtime: static
