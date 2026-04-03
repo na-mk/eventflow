@@ -4,6 +4,10 @@ set -eu
 export APP_ENV="${APP_ENV:-prod}"
 export APP_DEBUG="${APP_DEBUG:-0}"
 
+if [ ! -f .env ]; then
+  touch .env
+fi
+
 mkdir -p var/jwt
 
 if [ -n "${JWT_PRIVATE_KEY_B64:-}" ]; then
