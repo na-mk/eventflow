@@ -1,9 +1,8 @@
 #!/usr/bin/env sh
 set -eu
 
-if [ ! -f .env ] && [ -f .env.example ]; then
-  cp .env.example .env
-fi
+export APP_ENV="${APP_ENV:-prod}"
+export APP_DEBUG="${APP_DEBUG:-0}"
 
 mkdir -p var/jwt
 
