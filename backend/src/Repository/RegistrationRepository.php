@@ -25,6 +25,20 @@ class RegistrationRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    public function findConfirmedByEvent(int $eventId): array
+    {
+        return $this->createQueryBuilder('r')
+            ->innerJoin('r.user', 'u')
+            ->addSelect('u')
+            ->where('r.event = :eventId')
+            ->andWhere('r.status = :status')
+            ->setParameter('eventId', $eventId)
+            ->setParameter('status', Registration::STATUS_CONFIRMED)
+            ->orderBy('r.registeredAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function hasScheduleConflictForUser(
         int $userId,
         DateTimeInterface $eventStart,

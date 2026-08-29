@@ -7,6 +7,9 @@ const eventsStore = useEventsStore()
 const userStore = useAuthStore()
 const q = ref('')
 const sortBy = ref('dateAsc')
+const registrationFeedback = ref('')
+const registrationError = ref('')
+const registeringEventId = ref(null)
 
 const cardAccents = [
   { from: '#f97316', to: '#fb923c' },
@@ -17,7 +20,12 @@ const cardAccents = [
   { from: '#3b82f6', to: '#60a5fa' },
 ]
 
-onMounted(() => { eventsStore.fetchEvents() })
+onMounted(async () => {
+  await eventsStore.fetchEvents()
+  if (userStore.isAuthenticated) {
+    await eventsStore.fetchMyRegistrations()
+  }
+})
 
 function formatDate(iso) {
   if (!iso) return { day: '—', month: '—', year: '' }
@@ -67,10 +75,35 @@ async function handleDelete(id) {
   if (!confirm('Supprimer cet événement ?')) return
   await eventsStore.deleteEvent(id)
 }
+
+async function handleRegister(eventId) {
+  if (eventsStore.isRegisteredToEvent(eventId) || registeringEventId.value !== null) return
+
+  registrationFeedback.value = ''
+  registrationError.value = ''
+  registeringEventId.value = eventId
+
+  try {
+    await eventsStore.registerToEvent(eventId)
+    registrationFeedback.value = 'Inscription confirmée avec succès.'
+  } catch (err) {
+    registrationError.value = err?.response?.data?.message || 'Impossible de vous inscrire à cet événement.'
+  } finally {
+    registeringEventId.value = null
+  }
+}
 </script>
 
 <template>
   <div>
+    <div v-if="registrationFeedback" class="mb-6 rounded-2xl border px-4 py-3 text-sm text-emerald-700"
+      style="background:rgba(16,185,129,0.09); border-color:rgba(16,185,129,0.22)">
+      {{ registrationFeedback }}
+    </div>
+    <div v-if="registrationError" class="mb-6 rounded-2xl border px-4 py-3 text-sm text-red-600"
+      style="background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.2)">
+      {{ registrationError }}
+    </div>
     <!-- Controls -->
     <div class="flex flex-col sm:flex-row gap-3 mb-10">
       <div class="relative flex-1">
@@ -186,11 +219,17 @@ async function handleDelete(id) {
 
           <!-- Actions -->
           <div class="mt-5 pt-4 border-t ef-border flex items-center gap-2 mt-auto">
-            <button v-if="userStore.isAuthenticated && !event.isFull"
+            <button v-if="userStore.isAuthenticated && eventsStore.isRegisteredToEvent(event.id)"
+              class="btn-outline text-xs px-4 py-2 rounded-lg cursor-default"
+              disabled>
+              Inscrit ✓
+            </button>
+            <button v-else-if="userStore.isAuthenticated && !event.isFull"
               class="btn-primary text-xs px-4 py-2 rounded-lg"
               :style="`background: ${accent(i).from}`"
-              @click="eventsStore.registerToEvent(event.id).catch(e => alert(e?.response?.data?.message || 'Déjà inscrit ou erreur'))">
-              S'inscrire
+              :disabled="registeringEventId !== null"
+              @click="handleRegister(event.id)">
+              {{ registeringEventId === event.id ? 'Inscription...' : "S'inscrire" }}
             </button>
             <span v-else-if="event.isFull" class="text-xs text-slate-600 italic">Complet</span>
             <router-link v-else to="/login" class="btn-ghost text-xs px-3 py-1.5">Connexion</router-link>

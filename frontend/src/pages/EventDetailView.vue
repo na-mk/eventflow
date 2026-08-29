@@ -1,7 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { api } from '../services/api'
 import { useEventsStore } from '../stores/events'
 import { useAuthStore } from '../stores/auth'
 
@@ -13,20 +12,26 @@ const event = ref(null)
 const loading = ref(true)
 const error = ref('')
 const feedback = ref('')
+const feedbackSuccess = ref(false)
+const registering = ref(false)
 
 onMounted(async () => {
   loading.value = true
   error.value = ''
 
   try {
-    const res = await api.get(`/events/${route.params.id}`)
-    event.value = res.data
+    event.value = await eventsStore.fetchEventById(route.params.id)
+    if (authStore.isAuthenticated) {
+      await eventsStore.fetchMyRegistrations()
+    }
   } catch (err) {
     error.value = err?.response?.data?.message || 'Impossible de charger cet evenement.'
   } finally {
     loading.value = false
   }
 })
+
+const isRegistered = computed(() => eventsStore.isRegisteredToEvent(route.params.id))
 
 const capacityRatio = computed(() => {
   const max = Number(event.value?.maxParticipants || 0)
@@ -72,18 +77,25 @@ function formatRange(start, end) {
 }
 
 async function register() {
+  if (isRegistered.value || registering.value) return
+
   feedback.value = ''
+  feedbackSuccess.value = false
+  registering.value = true
 
   try {
     await eventsStore.registerToEvent(route.params.id)
-    feedback.value = 'Inscription enregistree avec succes.'
+    feedback.value = 'Inscription confirmée avec succès.'
+    feedbackSuccess.value = true
     if (event.value) {
-      event.value.participantsCount += 1
-      event.value.remainingPlaces = Math.max(0, Number(event.value.remainingPlaces || event.value.maxParticipants) - 1)
+      event.value.remainingPlaces = Math.max(0, Number(event.value.remainingPlaces) - 1)
+      event.value.participantsCount = Math.max(0, Number(event.value.maxParticipants) - event.value.remainingPlaces)
       event.value.isFull = event.value.remainingPlaces === 0
     }
   } catch (err) {
-    feedback.value = err?.response?.data?.message || 'Impossible de vous inscrire a cet evenement.'
+    feedback.value = err?.response?.data?.message || 'Impossible de vous inscrire à cet événement.'
+  } finally {
+    registering.value = false
   }
 }
 </script>
@@ -148,10 +160,13 @@ async function register() {
             Connectez-vous pour vous inscrire. Les evenements complets restent visibles mais ne peuvent plus accepter de nouvelles inscriptions.
           </p>
           <div v-if="feedback" class="mt-4 rounded-xl border px-4 py-3 text-sm"
-            :style="feedback.includes('succes') ? 'background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.2); color:#059669' : 'background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.2); color:#dc2626'">
+            :style="feedbackSuccess ? 'background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.2); color:#059669' : 'background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.2); color:#dc2626'">
             {{ feedback }}
           </div>
-          <button v-if="authStore.isAuthenticated && !event.isFull" class="btn-primary mt-5" @click="register">M'inscrire</button>
+          <button v-if="authStore.isAuthenticated && isRegistered" class="btn-outline mt-5 cursor-default" disabled>Inscrit ✓</button>
+          <button v-else-if="authStore.isAuthenticated && !event.isFull" class="btn-primary mt-5" :disabled="registering" @click="register">
+            {{ registering ? 'Inscription...' : "M'inscrire" }}
+          </button>
           <router-link v-else-if="!authStore.isAuthenticated" to="/login" class="btn-primary mt-5">Se connecter</router-link>
           <div v-else class="badge-orange mt-5">Aucune place disponible</div>
         </section>

@@ -5,9 +5,16 @@ export const useEventsStore = defineStore('events', {
   state: () => ({
     events: [],
     myRegistrations: [],
+    participantsByEvent: {},
     loading: false,
     error: null
   }),
+
+  getters: {
+    isRegisteredToEvent: (state) => (eventId) => state.myRegistrations.some(
+      (registration) => registration.status === 'confirmed' && Number(registration.event?.id) === Number(eventId)
+    )
+  },
 
   actions: {
     async fetchEventById(id) {
@@ -89,9 +96,37 @@ export const useEventsStore = defineStore('events', {
     },
 
     async registerToEvent(eventId) {
+      const activeRegistration = this.myRegistrations.find(
+        (registration) => registration.status === 'confirmed' && Number(registration.event?.id) === Number(eventId)
+      )
+      if (activeRegistration) return activeRegistration
+
       try {
         const res = await api.post(`/events/${eventId}/register`)
-        return res.data
+        const registration = res.data
+        const existingIndex = this.myRegistrations.findIndex(
+          (item) => Number(item.event?.id) === Number(eventId)
+        )
+
+        if (existingIndex === -1) {
+          this.myRegistrations.push(registration)
+        } else {
+          this.myRegistrations[existingIndex] = registration
+        }
+
+        const eventIndex = this.events.findIndex((event) => Number(event.id) === Number(eventId))
+        if (eventIndex !== -1) {
+          const event = this.events[eventIndex]
+          const remainingPlaces = Math.max(0, Number(event.remainingPlaces) - 1)
+          this.events[eventIndex] = {
+            ...event,
+            participantsCount: Math.max(0, Number(event.maxParticipants) - remainingPlaces),
+            remainingPlaces,
+            isFull: remainingPlaces === 0,
+          }
+        }
+
+        return registration
       } catch (err) {
         this.error = err?.response?.data?.message || 'Erreur inscription'
         throw err
@@ -113,8 +148,21 @@ export const useEventsStore = defineStore('events', {
       try {
         const res = await api.get('/registrations/my')
         this.myRegistrations = res.data
+        return res.data
       } catch (err) {
         this.error = err?.response?.data?.message || 'Erreur chargement inscriptions'
+        return []
+      }
+    },
+
+    async fetchEventParticipants(eventId) {
+      try {
+        const res = await api.get(`/events/${eventId}/participants`)
+        this.participantsByEvent[eventId] = res.data
+        return res.data
+      } catch (err) {
+        this.error = err?.response?.data?.message || 'Erreur chargement participants'
+        throw err
       }
     }
   }

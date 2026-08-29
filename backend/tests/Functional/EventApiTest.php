@@ -188,4 +188,78 @@ class EventApiTest extends ApiTestCase
         self::assertSame($registrationId, $data['id']);
         self::assertSame(Registration::STATUS_CONFIRMED, $data['status']);
     }
+
+    public function testOwnerOrganizerCanListConfirmedParticipants(): void
+    {
+        $organizer = $this->createUser(['email' => 'participants-owner@eventflow.test', 'role' => 'organisateur']);
+        $participant = $this->createUser([
+            'email' => 'mia@eventflow.test',
+            'firstName' => 'Mia',
+            'lastName' => 'First',
+        ]);
+        $event = $this->createEvent($organizer);
+        $this->createRegistration($participant, $event, Registration::STATUS_CONFIRMED);
+
+        $this->jsonRequest('GET', '/api/events/'.$event->getId().'/participants', null, $this->authHeaders($organizer));
+        self::assertResponseIsSuccessful();
+
+        $data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertCount(1, $data);
+        self::assertSame('Mia', $data[0]['firstName']);
+        self::assertSame('mia@eventflow.test', $data[0]['email']);
+        self::assertSame(Registration::STATUS_CONFIRMED, $data[0]['status']);
+        self::assertArrayNotHasKey('password', $data[0]);
+    }
+
+    public function testOtherOrganizerCannotListEventParticipants(): void
+    {
+        $owner = $this->createUser(['email' => 'participants-owner-2@eventflow.test', 'role' => 'organisateur']);
+        $otherOrganizer = $this->createUser(['email' => 'participants-other@eventflow.test', 'role' => 'organisateur']);
+        $event = $this->createEvent($owner);
+
+        $this->jsonRequest('GET', '/api/events/'.$event->getId().'/participants', null, $this->authHeaders($otherOrganizer));
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testParticipantCannotListEventParticipants(): void
+    {
+        $owner = $this->createUser(['email' => 'participants-owner-3@eventflow.test', 'role' => 'organisateur']);
+        $participant = $this->createUser(['email' => 'participants-forbidden@eventflow.test']);
+        $event = $this->createEvent($owner);
+
+        $this->jsonRequest('GET', '/api/events/'.$event->getId().'/participants', null, $this->authHeaders($participant));
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testParticipantsEndpointReturns404ForUnknownEvent(): void
+    {
+        $organizer = $this->createUser(['email' => 'participants-missing@eventflow.test', 'role' => 'organisateur']);
+
+        $this->jsonRequest('GET', '/api/events/999999/participants', null, $this->authHeaders($organizer));
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testCancelledRegistrationsAreExcludedFromParticipantList(): void
+    {
+        $organizer = $this->createUser(['email' => 'participants-owner-4@eventflow.test', 'role' => 'organisateur']);
+        $participant = $this->createUser(['email' => 'cancelled-participant@eventflow.test']);
+        $event = $this->createEvent($organizer);
+        $this->createRegistration($participant, $event, Registration::STATUS_CANCELLED);
+
+        $this->jsonRequest('GET', '/api/events/'.$event->getId().'/participants', null, $this->authHeaders($organizer));
+        self::assertResponseIsSuccessful();
+        self::assertSame([], json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR));
+    }
+
+    private function createRegistration($user, $event, string $status): Registration
+    {
+        $registration = (new Registration())
+            ->setUser($user)
+            ->setEvent($event)
+            ->setStatus($status);
+        $this->em->persist($registration);
+        $this->em->flush();
+
+        return $registration;
+    }
 }

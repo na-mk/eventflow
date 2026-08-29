@@ -7,6 +7,9 @@ const authStore = useAuthStore()
 const eventsStore = useEventsStore()
 const feedback = ref('')
 const registrationSuccess = ref('')
+const selectedParticipantsEventId = ref(null)
+const participantsLoading = ref(false)
+const participantsError = ref('')
 
 function consumeRegistrationFlash() {
   try {
@@ -57,6 +60,30 @@ async function cancelRegistration(registrationId) {
   } catch (err) {
     feedback.value = err?.response?.data?.message || 'Impossible d annuler cette inscription.'
   }
+}
+
+async function toggleParticipants(eventId) {
+  participantsError.value = ''
+
+  if (selectedParticipantsEventId.value === eventId) {
+    selectedParticipantsEventId.value = null
+    return
+  }
+
+  selectedParticipantsEventId.value = eventId
+  participantsLoading.value = true
+
+  try {
+    await eventsStore.fetchEventParticipants(eventId)
+  } catch (err) {
+    participantsError.value = err?.response?.data?.message || 'Impossible de charger les participants.'
+  } finally {
+    participantsLoading.value = false
+  }
+}
+
+function participantsFor(eventId) {
+  return eventsStore.participantsByEvent[eventId] || []
 }
 </script>
 
@@ -125,6 +152,58 @@ async function cancelRegistration(registrationId) {
         </div>
       </section>
     </div>
+
+    <section v-if="authStore.isOrganizer" class="glass p-6">
+      <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div class="section-label mb-2">Organisation</div>
+          <h2 class="text-2xl font-extrabold text-main">Mes événements organisés</h2>
+        </div>
+        <router-link to="/events/create" class="btn-primary">Créer un événement</router-link>
+      </div>
+
+      <div v-if="eventsStore.events.length === 0" class="mt-5 rounded-2xl border p-6 text-sm text-sub"
+        style="border-color:var(--border); background:var(--bg-card)">
+        Aucun événement organisé pour le moment.
+      </div>
+
+      <div v-else class="mt-5 grid gap-4">
+        <article v-for="event in eventsStore.events" :key="event.id" class="rounded-2xl border p-5"
+          style="border-color:var(--border); background:var(--bg-card)">
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h3 class="text-xl font-extrabold text-main">{{ event.title }}</h3>
+              <p class="mt-1 text-sm text-sub">{{ formatDate(event.eventDate) }}</p>
+              <p class="mt-2 text-xs font-semibold text-sub">
+                {{ event.participantsCount }} participant{{ event.participantsCount > 1 ? 's' : '' }} / {{ event.maxParticipants }} places
+              </p>
+            </div>
+            <button class="btn-outline" @click="toggleParticipants(event.id)">
+              {{ selectedParticipantsEventId === event.id ? 'Masquer les participants' : `Voir les participants (${event.participantsCount})` }}
+            </button>
+          </div>
+
+          <div v-if="selectedParticipantsEventId === event.id" class="mt-5 border-t pt-5 ef-border">
+            <h4 class="font-bold text-main">Participants inscrits — {{ event.title }}</h4>
+
+            <p v-if="participantsLoading" class="mt-4 text-sm text-sub">Chargement des participants...</p>
+            <p v-else-if="participantsError" class="mt-4 text-sm text-red-600">{{ participantsError }}</p>
+            <p v-else-if="participantsFor(event.id).length === 0" class="mt-4 text-sm text-sub">
+              Aucun participant inscrit pour le moment.
+            </p>
+            <div v-else class="mt-4 grid gap-3 sm:grid-cols-2">
+              <div v-for="participant in participantsFor(event.id)" :key="participant.registrationId"
+                class="rounded-xl border p-4" style="border-color:var(--border); background:var(--bg-base)">
+                <div class="font-bold text-main">{{ participant.firstName }} {{ participant.lastName }}</div>
+                <div class="mt-1 text-sm text-sub">{{ participant.email }}</div>
+                <div class="mt-2 text-xs text-muted">Inscrite le {{ formatDate(participant.registeredAt) }}</div>
+                <span class="badge-green mt-3">Confirmée</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
 
     <section class="glass p-6">
       <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">

@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Event;
 use App\Entity\User;
 use App\Repository\EventRepository;
+use App\Repository\RegistrationRepository;
 use App\Security\EventVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -49,6 +50,23 @@ class EventController extends AbstractController
         }
 
         return $this->json($this->serializeEvent($event));
+    }
+
+    #[Route('/{id}/participants', name: 'api_events_participants', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function participants(Event $event, RegistrationRepository $registrationRepo): JsonResponse
+    {
+        $this->denyAccessUnlessGranted(EventVoter::VIEW_PARTICIPANTS, $event);
+
+        $registrations = $registrationRepo->findConfirmedByEvent($event->getId());
+
+        return $this->json(array_map(static fn($registration) => [
+            'registrationId' => $registration->getId(),
+            'firstName' => $registration->getUser()?->getFirstName(),
+            'lastName' => $registration->getUser()?->getLastName(),
+            'email' => $registration->getUser()?->getEmail(),
+            'registeredAt' => $registration->getRegisteredAt()?->format('c'),
+            'status' => $registration->getStatus(),
+        ], $registrations));
     }
 
     // POST /api/events
