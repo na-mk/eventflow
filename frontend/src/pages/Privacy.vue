@@ -41,7 +41,7 @@
     <section>
       <h3 class="font-bold text-slate-900 mb-2">5. Durée de conservation</h3>
       <ul class="list-disc ml-5 space-y-1">
-        <li>Données de compte : 3 ans après la dernière activité</li>
+        <li>Données de compte : 24 mois après la dernière activité</li>
         <li>Logs de consentement : 5 ans (obligation légale)</li>
         <li>Données anonymisées : conservation illimitée</li>
       </ul>

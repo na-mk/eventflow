@@ -3,6 +3,7 @@
 namespace App\Tests\Functional;
 
 use App\Entity\ConsentLog;
+use App\Entity\Registration;
 use App\Entity\User;
 
 class AuthApiTest extends ApiTestCase
@@ -73,6 +74,21 @@ class AuthApiTest extends ApiTestCase
         self::assertNotEmpty($data['token']);
     }
 
+    public function testPublicRegistrationCannotCreateAdmin(): void
+    {
+        $this->jsonRequest('POST', '/api/auth/register', [
+            'email' => 'forbidden-admin@eventflow.test',
+            'password' => 'Password123!',
+            'firstName' => 'Alice',
+            'lastName' => 'Admin',
+            'role' => 'admin',
+            'consentGiven' => true,
+        ]);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertNull($this->em->getRepository(User::class)->findOneBy(['email' => 'forbidden-admin@eventflow.test']));
+    }
+
     public function testAuthenticatedUserCanExportPersonalData(): void
     {
         $user = $this->createUser([
@@ -80,8 +96,16 @@ class AuthApiTest extends ApiTestCase
             'firstName' => 'Eva',
             'lastName' => 'Durand',
             'phone' => '0607080910',
-            'role' => 'participant',
+            'role' => 'organisateur',
         ]);
+
+        $event = $this->createEvent($user, ['title' => 'Exported event']);
+        $registration = (new Registration())
+            ->setUser($user)
+            ->setEvent($event)
+            ->setStatus(Registration::STATUS_CONFIRMED);
+        $this->em->persist($registration);
+        $this->em->flush();
 
         $log = new ConsentLog();
         $log
@@ -102,5 +126,33 @@ class AuthApiTest extends ApiTestCase
         self::assertSame('Eva', $data['personalData']['firstName']);
         self::assertNotEmpty($data['consentLogs']);
         self::assertContains(ConsentLog::ACTION_CONSENT_GIVEN, array_column($data['consentLogs'], 'action'));
+        self::assertSame('Exported event', $data['registrations'][0]['event']['title']);
+        self::assertSame('Exported event', $data['organizedEvents'][0]['title']);
+        self::assertArrayNotHasKey('password', $data['personalData']);
+    }
+
+    public function testAnonymizationRevokesPrivilegesAndBlocksFurtherAccess(): void
+    {
+        $user = $this->createUser([
+            'email' => 'anonymize@eventflow.test',
+            'role' => 'administrateur',
+        ]);
+        $userId = $user->getId();
+        $oldPasswordHash = $user->getPassword();
+        $headers = $this->authHeaders($user);
+
+        $this->jsonRequest('DELETE', '/api/me', null, $headers);
+        self::assertResponseIsSuccessful();
+
+        $this->em->clear();
+        $anonymizedUser = $this->em->getRepository(User::class)->find($userId);
+        self::assertNotNull($anonymizedUser);
+        self::assertTrue($anonymizedUser->isAnonymized());
+        self::assertNotSame($oldPasswordHash, $anonymizedUser->getPassword());
+        self::assertNotContains('ROLE_ADMIN', $anonymizedUser->getRoles());
+        self::assertNotContains('ROLE_ORGANIZER', $anonymizedUser->getRoles());
+
+        $this->jsonRequest('GET', '/api/me', null, $headers);
+        self::assertResponseStatusCodeSame(401);
     }
 }

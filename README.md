@@ -240,7 +240,7 @@ Une configuration Render Blueprint est fournie dans `render.yaml`.
 
 - `eventflow-api` : Web Service Docker pour Symfony
 - `eventflow-front` : Static Site pour Vue/Vite
-- une base MySQL Render ou un service MySQL privé Render à créer côté dashboard
+- la base PostgreSQL 16 déclarée dans le Blueprint `render.yaml` (le développement local reste basé sur MySQL 8)
 
 ### Variables à définir sur Render
 
@@ -255,7 +255,7 @@ Pour `eventflow-front` :
 
 ### Valeurs conseillées
 
-`DATABASE_URL` :
+`DATABASE_URL` est fournie automatiquement par la base PostgreSQL déclarée dans `render.yaml`. Pour un déploiement MySQL distinct, utiliser :
 
 ```env
 mysql://USER:PASSWORD@MYSQL_HOST:3306/eventflow?serverVersion=8.0&charset=utf8mb4
@@ -298,8 +298,8 @@ Sur PowerShell :
 1. Push ton dépôt sur GitHub.
 2. Sur Render, crée un nouveau Blueprint depuis ce repo.
 3. Fournis les variables manquantes demandées.
-4. Crée la base MySQL Render si elle n'existe pas déjà.
-5. Mets l'URL MySQL finale dans `DATABASE_URL`.
+4. Vérifie que la base PostgreSQL du Blueprint est créée.
+5. Vérifie que `DATABASE_URL` est injectée automatiquement depuis `eventflow-db`.
 6. Déploie d'abord `eventflow-api`, puis `eventflow-front`.
 
 Références officielles Render :

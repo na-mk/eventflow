@@ -44,6 +44,10 @@ class EventController extends AbstractController
     #[Route('/{id}', name: 'api_events_show', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function show(Event $event): JsonResponse
     {
+        if (!$event->isPublished() && !$this->isGranted(EventVoter::VIEW, $event)) {
+            throw $this->createNotFoundException('Event not found');
+        }
+
         return $this->json($this->serializeEvent($event));
     }
 

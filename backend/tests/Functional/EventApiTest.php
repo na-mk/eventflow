@@ -2,6 +2,8 @@
 
 namespace App\Tests\Functional;
 
+use App\Entity\Registration;
+
 class EventApiTest extends ApiTestCase
 {
     public function testParticipantCannotRegisterToTwoOverlappingEvents(): void
@@ -136,5 +138,54 @@ class EventApiTest extends ApiTestCase
         ], $this->authHeaders($participant));
 
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testDraftIsHiddenFromVisitorsButVisibleToItsOrganizer(): void
+    {
+        $organizer = $this->createUser([
+            'email' => 'draft-owner@eventflow.test',
+            'role' => 'organisateur',
+        ]);
+        $draft = $this->createEvent($organizer, ['isPublished' => false]);
+        $otherUser = $this->createUser([
+            'email' => 'draft-other-user@eventflow.test',
+            'role' => 'participant',
+        ]);
+
+        $this->jsonRequest('GET', '/api/events/'.$draft->getId());
+        self::assertResponseStatusCodeSame(404);
+
+        $this->jsonRequest('GET', '/api/events/'.$draft->getId(), null, $this->authHeaders($otherUser));
+        self::assertResponseStatusCodeSame(404);
+
+        $this->jsonRequest('GET', '/api/events/'.$draft->getId(), null, $this->authHeaders($organizer));
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testParticipantCanRegisterAgainAfterCancellation(): void
+    {
+        $organizer = $this->createUser([
+            'email' => 'reregister-organizer@eventflow.test',
+            'role' => 'organisateur',
+        ]);
+        $participant = $this->createUser([
+            'email' => 'reregister-participant@eventflow.test',
+            'role' => 'participant',
+        ]);
+        $event = $this->createEvent($organizer);
+        $headers = $this->authHeaders($participant);
+
+        $this->jsonRequest('POST', '/api/events/'.$event->getId().'/register', null, $headers);
+        self::assertResponseStatusCodeSame(201);
+        $registrationId = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR)['id'];
+
+        $this->jsonRequest('DELETE', '/api/registrations/'.$registrationId, null, $headers);
+        self::assertResponseIsSuccessful();
+
+        $this->jsonRequest('POST', '/api/events/'.$event->getId().'/register', null, $headers);
+        self::assertResponseStatusCodeSame(200);
+        $data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame($registrationId, $data['id']);
+        self::assertSame(Registration::STATUS_CONFIRMED, $data['status']);
     }
 }

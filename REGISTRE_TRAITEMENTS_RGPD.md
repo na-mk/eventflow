@@ -15,7 +15,7 @@
 | **Base légale** | Consentement explicite (Art. 6.1.a RGPD) |
 | **Données concernées** | Nom, prénom, email, mot de passe (hashé bcrypt), téléphone (optionnel), date/version du consentement |
 | **Destinataires** | Application EventFlow uniquement |
-| **Durée de conservation** | 3 ans après la dernière activité |
+| **Durée de conservation** | 24 mois après la dernière activité |
 | **Mesures de sécurité** | Mot de passe hashé bcrypt, transmission HTTPS, JWT signé RS256 |
 
 ---

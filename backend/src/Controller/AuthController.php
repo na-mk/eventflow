@@ -35,12 +35,17 @@ class AuthController extends AbstractController
             return $this->json(['message' => 'Consent is required (RGPD)'], 422);
         }
 
+        $role = $this->normalizePublicRole($data);
+        if ($role === null) {
+            return $this->json(['errors' => ['role' => 'Only participant or organizer roles are allowed']], 422);
+        }
+
         $user = new User();
         $user->setEmail($data['email'] ?? '');
         $user->setFirstName($data['firstName'] ?? '');
         $user->setLastName($data['lastName'] ?? '');
         $user->setPhone($data['phone'] ?? null);
-        $user->setRoles([$this->normalizeRole($data)]);
+        $user->setRoles([$role]);
         $user->setConsentDate(new \DateTimeImmutable());
         $user->setConsentVersion('1.0');
 
@@ -118,15 +123,15 @@ class AuthController extends AbstractController
         ];
     }
 
-    private function normalizeRole(array $data): string
+    private function normalizePublicRole(array $data): ?string
     {
         $rawRole = $data['role'] ?? $data['roles'][0] ?? 'participant';
         $normalized = strtolower((string) $rawRole);
 
         return match ($normalized) {
-            'role_admin', 'admin', 'administrateur' => 'ROLE_ADMIN',
             'role_organizer', 'organizer', 'organisateur' => 'ROLE_ORGANIZER',
-            default => 'ROLE_USER',
+            'role_user', 'role_participant', 'participant' => 'ROLE_USER',
+            default => null,
         };
     }
 }

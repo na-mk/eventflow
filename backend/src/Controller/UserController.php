@@ -5,6 +5,8 @@ namespace App\Controller;
 use App\Entity\ConsentLog;
 use App\Entity\User;
 use App\Repository\ConsentLogRepository;
+use App\Repository\EventRepository;
+use App\Repository\RegistrationRepository;
 use App\Service\ConsentLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -78,7 +80,8 @@ class UserController extends AbstractController
     public function anonymize(
         Request $request,
         EntityManagerInterface $em,
-        ConsentLogService $consentLogService
+        ConsentLogService $consentLogService,
+        UserPasswordHasherInterface $hasher
     ): JsonResponse {
         /** @var User $user */
         $user = $this->getUser();
@@ -100,6 +103,8 @@ class UserController extends AbstractController
         $user->setFirstName('Utilisateur supprimé');
         $user->setLastName('Compte supprimé');
         $user->setPhone(null);
+        $user->setPassword($hasher->hashPassword($user, bin2hex(random_bytes(32))));
+        $user->setRoles([User::ROLE_PARTICIPANT]);
         $user->setIsAnonymized(true);
         $user->setConsentDate(null);
 
@@ -112,6 +117,8 @@ class UserController extends AbstractController
     #[Route('/export', name: 'api_me_export', methods: ['GET'])]
     public function export(
         ConsentLogRepository $clRepo,
+        RegistrationRepository $registrationRepo,
+        EventRepository $eventRepo,
         Request $request,
         ConsentLogService $consentLogService
     ): JsonResponse {
@@ -126,6 +133,8 @@ class UserController extends AbstractController
         );
 
         $logs = $clRepo->findByUser($user->getId());
+        $registrations = $registrationRepo->findBy(['user' => $user]);
+        $organizedEvents = $eventRepo->findByOrganizer($user->getId());
 
         return $this->json([
             'personalData' => $this->serializeUser($user),
@@ -134,6 +143,28 @@ class UserController extends AbstractController
                 'timestamp' => $l->getTimestamp()?->format('c'),
                 'details'   => $l->getDetails(),
             ], $logs),
+            'registrations' => array_map(fn($registration) => [
+                'id' => $registration->getId(),
+                'status' => $registration->getStatus(),
+                'registeredAt' => $registration->getRegisteredAt()?->format('c'),
+                'event' => [
+                    'id' => $registration->getEvent()?->getId(),
+                    'title' => $registration->getEvent()?->getTitle(),
+                    'eventDate' => $registration->getEvent()?->getEventDate()?->format('c'),
+                    'location' => $registration->getEvent()?->getLocation(),
+                ],
+            ], $registrations),
+            'organizedEvents' => array_map(fn($event) => [
+                'id' => $event->getId(),
+                'title' => $event->getTitle(),
+                'description' => $event->getDescription(),
+                'eventDate' => $event->getEventDate()?->format('c'),
+                'endDate' => $event->getEndDate()?->format('c'),
+                'location' => $event->getLocation(),
+                'maxParticipants' => $event->getMaxParticipants(),
+                'isPublished' => $event->isPublished(),
+                'createdAt' => $event->getCreatedAt()?->format('c'),
+            ], $organizedEvents),
         ]);
     }
 

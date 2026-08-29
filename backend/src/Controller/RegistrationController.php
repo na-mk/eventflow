@@ -34,7 +34,7 @@ class RegistrationController extends AbstractController
 
         // Vérifier si déjà inscrit
         $existing = $registrationRepo->findByUserAndEvent($user->getId(), $id);
-        if ($existing) {
+        if ($existing && $existing->getStatus() !== Registration::STATUS_CANCELLED) {
             return $this->json(['message' => 'Already registered to this event'], 409);
         }
 
@@ -52,15 +52,19 @@ class RegistrationController extends AbstractController
             return $this->json(['message' => 'You are already registered for another event at the same time'], 409);
         }
 
-        $registration = new Registration();
-        $registration->setUser($user);
-        $registration->setEvent($event);
+        $registration = $existing ?? new Registration();
+        if ($existing === null) {
+            $registration->setUser($user);
+            $registration->setEvent($event);
+            $em->persist($registration);
+        } else {
+            $registration->setRegisteredAt(new \DateTimeImmutable());
+        }
         $registration->setStatus(Registration::STATUS_CONFIRMED);
 
-        $em->persist($registration);
         $em->flush();
 
-        return $this->json($this->serialize($registration), 201);
+        return $this->json($this->serialize($registration), $existing === null ? 201 : 200);
     }
 
     // DELETE /api/registrations/{id} — annuler sa propre inscription

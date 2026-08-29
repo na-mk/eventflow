@@ -12,10 +12,11 @@ class EventVoter extends Voter
     public const EDIT   = 'EVENT_EDIT';
     public const DELETE = 'EVENT_DELETE';
     public const PUBLISH = 'EVENT_PUBLISH';
+    public const VIEW = 'EVENT_VIEW';
 
     protected function supports(string $attribute, mixed $subject): bool
     {
-        return in_array($attribute, [self::EDIT, self::DELETE, self::PUBLISH])
+        return in_array($attribute, [self::EDIT, self::DELETE, self::PUBLISH, self::VIEW], true)
             && $subject instanceof Event;
     }
 
@@ -37,7 +38,7 @@ class EventVoter extends Voter
 
         // Organizer peut modifier/supprimer/publier ses propres événements
         return match ($attribute) {
-            self::EDIT, self::DELETE, self::PUBLISH => $event->getOrganizer()?->getId() === $user->getId(),
+            self::EDIT, self::DELETE, self::PUBLISH, self::VIEW => $event->getOrganizer()?->getId() === $user->getId(),
             default => false,
         };
     }
