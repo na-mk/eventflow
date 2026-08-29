@@ -1,63 +1,181 @@
 # EventFlow
 
-Plateforme de gestion d'événements professionnels construite avec une API REST Symfony et une SPA Vue.js.
+EventFlow est une plateforme web de gestion d'événements permettant aux participants de découvrir et rejoindre des conférences, formations et meetups, et aux organisateurs de créer leurs événements, gérer les inscriptions et consulter leurs participants.
 
-Stack principale :
+Le projet repose sur une architecture API-first avec un backend Symfony et une SPA Vue 3. Il intègre également les fonctionnalités RGPD demandées : consentement explicite, accès et rectification des données, export, anonymisation et journalisation des actions liées aux données personnelles.
+
+## Application en ligne
+
+- Frontend : https://eventflow-front-9961.onrender.com/
+- API : https://eventflow-1-g30y.onrender.com/api
+- Dépôt GitHub : https://github.com/na-mk/eventflow
+
+> La branche de référence du projet est `cleanup-backend`.
+
+## Stack technique
+
+- PHP 8.2+
 - Symfony 6.4
-- Vue.js 3
+- Doctrine ORM
+- Vue 3
 - Vite
 - Pinia
-- MySQL 8
-- JWT
-- RGPD natif
+- Vue Router
+- Axios
+- JWT signé avec LexikJWTAuthenticationBundle
+- MySQL 8 en environnement local
+- PostgreSQL 16 sur Render
+- Docker / Docker Compose
+- GitHub Actions
 
 ## Structure
 
 ```text
 eventflow/
-├── backend/   # API Symfony 6.4 + Doctrine + JWT
-└── frontend/  # SPA Vue 3 + Vite + Pinia
+├── backend/                    # API REST Symfony 6.4
+├── frontend/                   # SPA Vue 3 + Vite + Pinia
+├── .github/workflows/          # CI GitHub Actions
+├── REGISTRE_TRAITEMENTS_RGPD.md
+├── eventflow.http              # Requêtes API de démonstration
+├── docker-compose.yml
+├── render.yaml
+└── README.md
 ```
 
-Le frontend communique exclusivement avec le backend via l'API REST JSON.
+Le frontend communique exclusivement avec le backend via une API REST JSON.
 
-## Prérequis
+## Rôles
 
-| Outil | Version conseillée |
+### Visiteur
+
+- consulter les événements publiés ;
+- consulter le détail d'un événement ;
+- créer un compte participant ou organisateur.
+
+### Participant
+
+- s'inscrire à un événement ;
+- annuler une inscription ;
+- se réinscrire après annulation ;
+- retrouver ses inscriptions dans **Mon espace** ;
+- consulter, modifier, exporter ou anonymiser ses données personnelles.
+
+### Organisateur
+
+- créer, modifier, publier, dépublier et supprimer ses événements ;
+- suivre le nombre d'inscrits ;
+- consulter la liste des participants confirmés de ses propres événements ;
+- disposer des mêmes droits RGPD qu'un participant.
+
+### Administrateur
+
+- disposer des autorisations étendues prévues côté backend.
+
+L'inscription publique ne permet jamais de créer un compte administrateur.
+
+## Fonctionnalités principales
+
+### Gestion des événements
+
+- création et modification d'événements ;
+- publication / dépublication ;
+- consultation publique des événements publiés ;
+- protection des brouillons ;
+- gestion de la capacité ;
+- suivi des places restantes ;
+- recherche et tri côté frontend.
+
+### Inscriptions
+
+- inscription à un événement ;
+- prévention des doubles inscriptions actives ;
+- annulation sans suppression de l'historique ;
+- réactivation d'une inscription annulée ;
+- confirmation visuelle après inscription ;
+- état **Inscrit ✓** conservé après actualisation ;
+- liste sécurisée des participants pour le propriétaire de l'événement ou un administrateur.
+
+### Authentification et sécurité
+
+- authentification JWT signée ;
+- rôles participant, organisateur et administrateur ;
+- contrôles d'accès backend ;
+- Symfony Voter pour les autorisations liées aux événements ;
+- blocage de l'authentification des comptes anonymisés ;
+- secrets et clés JWT non versionnés.
+
+### RGPD
+
+- consentement explicite à l'inscription ;
+- date et version du consentement ;
+- journalisation via `ConsentLog` ;
+- adresse IP stockée sous forme de hash SHA-256 ;
+- droit d'accès ;
+- rectification ;
+- export des données personnelles ;
+- anonymisation du compte ;
+- commande d'anonymisation des comptes inactifs ;
+- préférences de cookies ;
+- politique de confidentialité ;
+- registre des traitements fourni dans le dépôt.
+
+## Principaux endpoints
+
+| Méthode | Endpoint | Accès | Description |
+|---|---|---|---|
+| POST | `/api/auth/register` | Public | Créer un compte avec consentement |
+| POST | `/api/auth/login` | Public | Se connecter et recevoir un JWT |
+| GET | `/api/events` | Public | Lister les événements accessibles |
+| GET | `/api/events/{id}` | Selon visibilité | Consulter un événement |
+| POST | `/api/events` | Organisateur / Admin | Créer un événement |
+| PUT | `/api/events/{id}` | Propriétaire / Admin | Modifier un événement |
+| DELETE | `/api/events/{id}` | Propriétaire / Admin | Supprimer un événement |
+| PATCH | `/api/events/{id}/publish` | Propriétaire / Admin | Publier ou dépublier |
+| POST | `/api/events/{id}/register` | Authentifié | S'inscrire |
+| GET | `/api/events/{id}/participants` | Propriétaire / Admin | Consulter les participants confirmés |
+| DELETE | `/api/registrations/{id}` | Authentifié | Annuler une inscription |
+| GET | `/api/registrations/my` | Authentifié | Consulter ses inscriptions |
+| GET | `/api/me` | Authentifié | Consulter ses données |
+| PUT | `/api/me` | Authentifié | Rectifier ses données |
+| DELETE | `/api/me` | Authentifié | Anonymiser son compte |
+| GET | `/api/me/export` | Authentifié | Exporter ses données |
+| POST | `/api/consent` | Authentifié | Mettre à jour le consentement |
+
+## Installation locale
+
+### Prérequis
+
+| Outil | Version |
 |---|---|
 | PHP | 8.2+ |
 | Composer | 2.x |
-| Node.js | 20 LTS |
+| Node.js | 20+ |
 | npm | 9+ |
 | MySQL | 8.0+ |
-
-## Installation
 
 ### 1. Cloner le dépôt
 
 ```bash
 git clone https://github.com/na-mk/eventflow.git
 cd eventflow
+git checkout cleanup-backend
 ```
 
-### 2. Configurer le backend
+### 2. Installer le backend
 
 ```bash
 cd backend
+cp .env.example .env
 composer install
 ```
 
-Copier le fichier d'exemple :
-
-```bash
-cp .env.example .env
-```
-
 Configurer au minimum :
+
 - `DATABASE_URL`
 - `JWT_SECRET_KEY`
 - `JWT_PUBLIC_KEY`
 - `JWT_PASSPHRASE`
+- `CORS_ALLOW_ORIGIN`
 
 Exemple MySQL local :
 
@@ -75,14 +193,14 @@ openssl genrsa -out config/jwt/private.pem 4096
 openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
 ```
 
-### 4. Créer la base et lancer les migrations
+### 4. Créer la base et appliquer les migrations
 
 ```bash
 php bin/console doctrine:database:create
 php bin/console doctrine:migrations:migrate
 ```
 
-### 5. Configurer le frontend
+### 5. Installer le frontend
 
 Depuis la racine du projet :
 
@@ -92,126 +210,88 @@ npm install
 cp .env.example .env
 ```
 
-Le frontend attend par défaut :
+Configuration locale :
 
 ```env
 VITE_API_URL=http://localhost:8000/api
 ```
 
-## Lancement
+## Lancement local
 
 ### Backend
 
-Depuis `backend/` :
-
 ```bash
+cd backend
 php -S 127.0.0.1:8000 -t public
 ```
 
 ### Frontend
 
-Depuis `frontend/` :
-
 ```bash
+cd frontend
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-Application disponible sur :
+Accès local :
+
 - Frontend : `http://127.0.0.1:5173`
 - API : `http://127.0.0.1:8000/api`
 
-## Variables d'environnement
+## Tests
 
 ### Backend
 
-Le fichier `backend/.env.example` fournit les variables minimales :
-- `APP_ENV`
-- `APP_SECRET`
-- `DATABASE_URL`
-- `JWT_SECRET_KEY`
-- `JWT_PUBLIC_KEY`
-- `JWT_PASSPHRASE`
-- `JWT_TTL`
-- `CORS_ALLOW_ORIGIN`
-
-### Frontend
-
-Le fichier `frontend/.env.example` fournit :
-- `VITE_API_URL`
-
-## Fonctionnalités principales
-
-### Backend API
-
-- inscription avec consentement RGPD
-- authentification JWT
-- CRUD événements
-- publication / dépublication d'événements
-- inscription à un événement
-- annulation d'inscription
-- gestion du profil utilisateur
-- rectification et anonymisation
-- export des données personnelles
-- mise à jour du consentement
-- commande d'anonymisation automatique des comptes inactifs
-
-### Frontend SPA
-
-- pages publiques : accueil, liste des événements, détail, confidentialité
-- authentification et inscription
-- dashboard utilisateur / organisateur
-- espace administrateur
-- création et édition d'événements
-- page "Mes données"
-- bandeau cookies
-- feedback utilisateur sur les actions clés
-
-## Endpoints principaux
-
-| Méthode | Endpoint | Accès | Description |
-|---|---|---|---|
-| POST | `/api/auth/register` | Public | Inscription + consentement |
-| POST | `/api/auth/login` | Public | Authentification JWT |
-| GET | `/api/events` | Public | Liste des événements publiés |
-| GET | `/api/events/{id}` | Public | Détail d'un événement |
-| POST | `/api/events` | Organizer/Admin | Créer un événement |
-| PUT | `/api/events/{id}` | Organizer owner/Admin | Modifier un événement |
-| DELETE | `/api/events/{id}` | Organizer owner/Admin | Supprimer un événement |
-| PATCH | `/api/events/{id}/publish` | Organizer owner/Admin | Publier ou dépublier |
-| POST | `/api/events/{id}/register` | Auth | S'inscrire |
-| DELETE | `/api/registrations/{id}` | Auth | Annuler son inscription |
-| GET | `/api/registrations/my` | Auth | Voir ses inscriptions |
-| GET | `/api/me` | Auth | Voir son profil |
-| PUT | `/api/me` | Auth | Rectifier ses données |
-| DELETE | `/api/me` | Auth | Anonymiser son compte |
-| GET | `/api/me/export` | Auth | Exporter ses données |
-| POST | `/api/consent` | Auth | Mettre à jour le consentement |
-
-## Commandes utiles
-
-Depuis `backend/` :
-
 ```bash
-php bin/console debug:router
-php bin/console doctrine:migrations:status
-php bin/console app:anonymize-old-users
-php bin/console app:anonymize-old-users --months=12
+cd backend
 php bin/phpunit
 ```
 
-Depuis `frontend/` :
+Dernière validation connue :
+
+```text
+OK (24 tests, 88 assertions)
+```
+
+Autres commandes de contrôle :
 
 ```bash
+php bin/console lint:container
+php bin/console lint:yaml config
+php bin/console doctrine:schema:validate --skip-sync
+php bin/console debug:router
+```
+
+### Frontend
+
+```bash
+cd frontend
 npm run build
 ```
 
+Le build Vite est validé sur la version livrée.
+
+## Intégration continue
+
+Le workflow `.github/workflows/backend-tests.yml` est exécuté automatiquement sur les pushes et pull requests.
+
+Il réalise notamment :
+
+1. la configuration de PHP 8.2 avec SQLite pour les tests ;
+2. la préparation de l'environnement Symfony de test ;
+3. la génération d'une paire de clés JWT de test ;
+4. l'installation des dépendances Composer ;
+5. l'exécution de PHPUnit.
+
+La CI GitHub Actions de la version finale est opérationnelle.
+
 ## Docker
 
-Une stack Docker est fournie à la racine du projet :
-- `mysql`
-- `backend`
-- `frontend`
-- `nginx`
+Une stack Docker est disponible à la racine du projet avec :
+
+- MySQL ;
+- backend Symfony ;
+- frontend Vue ;
+- Nginx.
 
 Lancement :
 
@@ -220,133 +300,106 @@ docker compose up --build
 ```
 
 Accès :
-- application via `http://localhost`
-- API via `http://localhost/api`
 
-## CI
+- application : `http://localhost`
+- API : `http://localhost/api`
 
-Une GitHub Action est fournie dans `.github/workflows/backend-tests.yml`.
+## Déploiement Render
 
-Elle exécute automatiquement :
-- installation des dépendances backend
-- génération d'une paire JWT
-- `php bin/phpunit`
+La version de démonstration est déployée sur Render.
 
-## Déploiement sur Render
+### Backend
 
-Une configuration Render Blueprint est fournie dans `render.yaml`.
+- Web Service Docker Symfony
+- PHP 8.2
+- PostgreSQL 16
+- migrations exécutées au démarrage
+- clés JWT injectées via variables d'environnement encodées en Base64
 
-### Services Render recommandés
+URL :
 
-- `eventflow-api` : Web Service Docker pour Symfony
-- `eventflow-front` : Static Site pour Vue/Vite
-- la base PostgreSQL 16 déclarée dans le Blueprint `render.yaml` (le développement local reste basé sur MySQL 8)
+```text
+https://eventflow-1-g30y.onrender.com/api
+```
 
-### Variables à définir sur Render
+### Frontend
 
-Pour `eventflow-api` :
+- Static Site Vue / Vite
+- variable `VITE_API_URL` configurée vers l'API Render
+
+URL :
+
+```text
+https://eventflow-front-9961.onrender.com/
+```
+
+### Variables principales en production
+
+Backend :
+
+- `APP_ENV`
+- `APP_SECRET`
 - `DATABASE_URL`
 - `JWT_PRIVATE_KEY_B64`
 - `JWT_PUBLIC_KEY_B64`
+- `JWT_PASSPHRASE`
+- `JWT_TTL`
 - `CORS_ALLOW_ORIGIN`
 
-Pour `eventflow-front` :
+Frontend :
+
 - `VITE_API_URL`
 
-### Valeurs conseillées
+Aucun secret de production n'est versionné dans le dépôt.
 
-`DATABASE_URL` est fournie automatiquement par la base PostgreSQL déclarée dans `render.yaml`. Pour un déploiement MySQL distinct, utiliser :
+## Commande d'anonymisation
 
-```env
-mysql://USER:PASSWORD@MYSQL_HOST:3306/eventflow?serverVersion=8.0&charset=utf8mb4
-```
-
-`CORS_ALLOW_ORIGIN` :
-
-```env
-^https://.*onrender\.com$
-```
-
-`VITE_API_URL` :
-
-```env
-https://eventflow-api.onrender.com/api
-```
-
-### JWT sur Render
-
-Le backend Render attend les clés JWT au format Base64 dans :
-- `JWT_PRIVATE_KEY_B64`
-- `JWT_PUBLIC_KEY_B64`
-
-Tu peux générer ces valeurs localement avec :
+Depuis `backend/` :
 
 ```bash
-base64 -w 0 backend/config/jwt/private.pem
-base64 -w 0 backend/config/jwt/public.pem
+php bin/console app:anonymize-old-users
 ```
 
-Sur PowerShell :
+La politique du projet prévoit l'anonymisation des comptes inactifs depuis plus de 24 mois.
 
-```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("backend/config/jwt/private.pem"))
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("backend/config/jwt/public.pem"))
-```
+## Livrables présents
 
-### Déploiement
+- application backend Symfony ;
+- application frontend Vue 3 ;
+- migrations Doctrine ;
+- tests fonctionnels backend ;
+- workflow GitHub Actions ;
+- Docker / Docker Compose ;
+- configuration Render ;
+- fichier `eventflow.http` ;
+- registre `REGISTRE_TRAITEMENTS_RGPD.md` ;
+- politique de confidentialité intégrée à l'application.
 
-1. Push ton dépôt sur GitHub.
-2. Sur Render, crée un nouveau Blueprint depuis ce repo.
-3. Fournis les variables manquantes demandées.
-4. Vérifie que la base PostgreSQL du Blueprint est créée.
-5. Vérifie que `DATABASE_URL` est injectée automatiquement depuis `eventflow-db`.
-6. Déploie d'abord `eventflow-api`, puis `eventflow-front`.
+## Points d'architecture
 
-Références officielles Render :
-- Blueprints : https://render.com/docs/infrastructure-as-code
-- Web services : https://render.com/docs/web-services
-- Static sites : https://render.com/docs/static-sites
-- MySQL : https://render.com/docs/deploy-mysql
+Le projet utilise notamment :
 
-## Tests et livrables
+- Controllers Symfony ;
+- Repositories Doctrine ;
+- Voter Symfony pour les autorisations ;
+- service de journalisation du consentement ;
+- Pinia pour l'état partagé frontend ;
+- Vue Router et guards de navigation ;
+- instance Axios centralisée avec intercepteur JWT.
 
-Le projet contient :
-- une suite PHPUnit backend
-- un fichier de requêtes HTTP exécutable : `eventflow.http`
-- un registre RGPD : `REGISTRE_TRAITEMENTS_RGPD.md`
+La séparation Service / DTO pourrait être approfondie dans une évolution future afin de réduire davantage la logique présente dans certains contrôleurs.
 
-### Lancer les tests backend
+## Perspectives
 
-```bash
-cd backend
-php bin/phpunit
-```
+Parmi les évolutions possibles :
 
-## RGPD
-
-Les points pris en charge dans l'application :
-- consentement explicite à l'inscription
-- journalisation des actions liées aux données personnelles
-- IP stockée sous forme de hash SHA-256 dans `ConsentLog`
-- rectification des données
-- anonymisation manuelle
-- anonymisation automatique des comptes inactifs
-- export des données personnelles
-- bandeau cookies granulaire
-- politique de confidentialité
-
-## Comptes utiles en local
-
-Compte admin local utilisé pendant le développement :
-- email : `admin@eventflow.local`
-- mot de passe : `Admin1234!`
-
-## Remarques
-
-- Ne pas commiter les fichiers `.env`
-- Ne pas commiter les clés JWT privées
-- En production, planifier `app:anonymize-old-users` via cron
-- Le frontend suppose que l'API répond sur le port `8000`
+- profils publics d'organisateurs avec logo ou photo ;
+- pages dédiées aux organisateurs et à leurs événements ;
+- catégories et filtres avancés ;
+- recherche par ville et par date ;
+- favoris ;
+- notifications ;
+- enrichissement des visuels des événements.
 
 ## Auteur
 
