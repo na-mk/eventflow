@@ -22,9 +22,9 @@ jobs:
           extensions: pdo_sqlite
           coverage: none
 
-      - name: Install backend dependencies
+      - name: Prepare Symfony test environment
         working-directory: backend
-        run: composer install --no-interaction --prefer-dist
+        run: cp .env.test .env
 
       - name: Generate JWT keypair
         working-directory: backend
@@ -32,6 +32,10 @@ jobs:
           mkdir -p config/jwt
           openssl genrsa -out config/jwt/private.pem 4096
           openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist
 
       - name: Run PHPUnit
         working-directory: backend
