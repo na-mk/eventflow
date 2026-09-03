@@ -25,4 +25,5 @@ if [ ! -f "${JWT_SECRET_KEY:-/app/var/jwt/private.pem}" ] || [ ! -f "${JWT_PUBLI
 fi
 
 php bin/console doctrine:migrations:migrate --no-interaction
+php create_admin.php
 php -S 0.0.0.0:"${PORT:-10000}" -t public
