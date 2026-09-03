@@ -8,32 +8,41 @@ use Symfony\Component\PasswordHasher\Hasher\NativePasswordHasher;
 
 (new Dotenv())->bootEnv(__DIR__ . '/.env');
 
-$kernel = new Kernel('dev', true);
+$email = trim((string) ($_SERVER['ADMIN_EMAIL'] ?? $_ENV['ADMIN_EMAIL'] ?? ''));
+$password = (string) ($_SERVER['ADMIN_PASSWORD'] ?? $_ENV['ADMIN_PASSWORD'] ?? '');
+
+if ($email === '') {
+    fwrite(STDERR, "ADMIN_EMAIL environment variable is required.\n");
+    exit(1);
+}
+
+if ($password === '') {
+    fwrite(STDERR, "ADMIN_PASSWORD environment variable is required.\n");
+    exit(1);
+}
+
+$environment = $_SERVER['APP_ENV'] ?? $_ENV['APP_ENV'] ?? 'prod';
+$debug = filter_var($_SERVER['APP_DEBUG'] ?? $_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOL);
+
+$kernel = new Kernel($environment, $debug);
 $kernel->boot();
 $container = $kernel->getContainer();
 $em = $container->get('doctrine')->getManager();
 $hasher = new NativePasswordHasher();
 
-$email = 'admin@eventflow.local';
-$password = 'Admin1234!';
-
-$existing = $em->getRepository(User::class)->findOneBy(['email' => $email]);
-if ($existing) {
-    echo "Admin already exists, deleting...\n";
-    $em->remove($existing);
-    $em->flush();
+$user = $em->getRepository(User::class)->findOneBy(['email' => $email]);
+if (!$user) {
+    $user = new User();
+    $user->setEmail($email);
+    $user->setFirstName('Admin');
+    $user->setLastName('User');
+    $user->setConsentDate(new \DateTimeImmutable());
+    $user->setConsentVersion('1.0');
+    $em->persist($user);
 }
 
-$user = new User();
-$user->setEmail($email);
-$user->setFirstName('Admin');
-$user->setLastName('User');
 $user->setRoles(['ROLE_ADMIN']);
-$user->setConsentDate(new \DateTimeImmutable());
-$user->setConsentVersion('1.0');
 $user->setPassword($hasher->hash($password));
-
-$em->persist($user);
 $em->flush();
 
-echo "Admin created: $email / $password\n";
+echo "Local admin is ready: $email\n";
